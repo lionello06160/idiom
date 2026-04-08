@@ -131,19 +131,19 @@ export function GameRoot({ children }: { children: React.ReactNode }) {
   const [header, board, dock, overlay] = childArray;
 
   return (
-    <div className="relative mx-auto flex min-h-screen w-full max-w-[1680px] flex-col justify-center overflow-hidden px-6 py-6">
-      <div className="animate-float absolute left-[-10%] top-[-10%] h-64 w-64 rounded-full bg-secondary/10 blur-3xl" />
+    <div className="relative mx-auto flex min-h-screen w-full max-w-[1680px] flex-col justify-center overflow-hidden px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-6">
+      <div className="animate-float absolute left-[-10%] top-[-10%] hidden h-64 w-64 rounded-full bg-secondary/10 blur-3xl lg:block" />
       <div
-        className="absolute bottom-[-10%] right-[-10%] h-64 w-64 rounded-full bg-accent/10 blur-3xl"
+        className="absolute bottom-[-10%] right-[-10%] hidden h-64 w-64 rounded-full bg-accent/10 blur-3xl lg:block"
         style={{ animationDelay: '1.5s' }}
       />
 
-      <div className="relative z-10 grid min-h-[calc(100vh-3rem)] w-full grid-cols-[340px_minmax(980px,1fr)] gap-8">
-        <div className="flex min-h-0 flex-col justify-between gap-8">
+      <div className="relative z-10 grid min-h-[calc(100vh-1.5rem)] w-full grid-rows-[auto_minmax(0,1fr)_auto] gap-3 lg:min-h-[calc(100vh-3rem)] lg:grid-cols-[340px_minmax(980px,1fr)] lg:grid-rows-1 lg:gap-8">
+        <div className="flex min-h-0 flex-col gap-3 lg:justify-between lg:gap-8">
           <div>{header}</div>
           <div>{dock}</div>
         </div>
-        <div className="flex min-h-0 items-start justify-center pt-2">
+        <div className="flex min-h-0 items-center justify-center lg:items-start lg:pt-2">
           {board}
         </div>
         <GameSoundEffects />
@@ -168,28 +168,28 @@ export function GameHeader() {
 
   if (!isReady) {
     return (
-      <div className="glass flex min-h-[320px] w-full items-center justify-center rounded-[2rem] p-8">
+      <div className="glass flex min-h-[240px] w-full items-center justify-center rounded-[1.75rem] p-6 sm:min-h-[320px] sm:rounded-[2rem] sm:p-8">
         <div className="space-y-3 text-center">
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-foreground/50">Idiom Grid</p>
-          <p className="title-gradient text-3xl font-black">載入進度中</p>
+          <p className="title-gradient text-2xl font-black sm:text-3xl">載入進度中</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="relative space-y-5 text-center">
+    <div className="relative space-y-3 text-center sm:space-y-4 lg:space-y-5">
       <div className="flex items-start justify-between gap-3">
         <div className="text-left">
-          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-foreground/50">Idiom Grid</p>
-          <h1 className="title-gradient text-3xl font-black">Level {level}</h1>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-foreground/50 sm:text-sm sm:tracking-[0.3em]">Idiom Grid</p>
+          <h1 className="title-gradient text-2xl font-black sm:text-3xl">Level {level}</h1>
         </div>
 
         <div className="flex gap-2">
           <button
             type="button"
             onClick={useHint}
-            className="glass rounded-full p-2 transition-colors hover:bg-white/40"
+            className="glass min-h-11 min-w-11 rounded-full p-2.5 transition-colors hover:bg-white/40"
             aria-label="使用提示"
           >
             <Lightbulb size={20} />
@@ -197,7 +197,7 @@ export function GameHeader() {
           <button
             type="button"
             onClick={() => setShowResetConfirm((prev) => !prev)}
-            className="glass rounded-full p-2 transition-colors hover:bg-white/40"
+            className="glass min-h-11 min-w-11 rounded-full p-2.5 transition-colors hover:bg-white/40"
             aria-label="重新開始本關"
           >
             <RotateCcw size={20} />
@@ -211,7 +211,7 @@ export function GameHeader() {
             initial={{ opacity: 0, y: -8, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.96 }}
-            className="glass absolute right-0 top-14 z-30 w-[280px] rounded-[1.5rem] p-4 text-left shadow-xl"
+            className="glass absolute right-0 top-14 z-30 w-[260px] rounded-[1.5rem] p-4 text-left shadow-xl sm:w-[280px]"
           >
             <p className="text-sm font-semibold text-foreground">重新開始本關？</p>
             <p className="mt-2 text-sm leading-relaxed text-foreground/70">
@@ -240,27 +240,27 @@ export function GameHeader() {
         ) : null}
       </AnimatePresence>
 
-      <div className="grid grid-cols-2 gap-3 text-left text-sm">
+      <div className="grid grid-cols-4 gap-2 text-left text-xs sm:grid-cols-2 sm:gap-3 sm:text-sm">
         <div className="glass rounded-2xl p-3">
           <p className="text-foreground/55">分數</p>
-          <p className="mt-1 text-xl font-black text-primary">{stats.score}</p>
+          <p className="mt-1 text-base font-black text-primary sm:text-xl">{stats.score}</p>
         </div>
         <div className="glass rounded-2xl p-3">
           <p className="text-foreground/55">連擊</p>
-          <p className="mt-1 text-xl font-black text-secondary">{stats.streak}</p>
+          <p className="mt-1 text-base font-black text-secondary sm:text-xl">{stats.streak}</p>
         </div>
         <div className="glass rounded-2xl p-3">
           <p className="text-foreground/55">錯誤</p>
-          <p className="mt-1 text-xl font-black text-accent">{stats.mistakes}</p>
+          <p className="mt-1 text-base font-black text-accent sm:text-xl">{stats.mistakes}</p>
         </div>
         <div className="glass rounded-2xl p-3">
           <p className="text-foreground/55">提示</p>
-          <p className="mt-1 text-xl font-black text-foreground">{stats.hintsUsed}</p>
+          <p className="mt-1 text-base font-black text-foreground sm:text-xl">{stats.hintsUsed}</p>
         </div>
       </div>
 
-      <div className="glass rounded-[1.75rem] p-5 text-left">
-        <div className="mb-3 flex items-center justify-between text-sm font-semibold text-foreground/70">
+      <div className="glass rounded-[1.5rem] p-4 text-left sm:rounded-[1.75rem] sm:p-5">
+        <div className="mb-2 flex items-center justify-between text-xs font-semibold text-foreground/70 sm:mb-3 sm:text-sm">
           <span>進度 {progressPercent}%</span>
           <span>
             {stats.solvedCells}/{stats.totalCells}
@@ -275,7 +275,7 @@ export function GameHeader() {
         </div>
       </div>
 
-      <div className="glass min-h-[180px] rounded-[1.75rem] p-6">
+      <div className="glass min-h-[116px] rounded-[1.5rem] p-4 sm:min-h-[180px] sm:rounded-[1.75rem] sm:p-6">
         <AnimatePresence mode="wait">
           {currentIdiom ? (
             <motion.div
@@ -285,11 +285,11 @@ export function GameHeader() {
               exit={{ opacity: 0, y: -10 }}
               className="space-y-2"
             >
-              <p className="flex items-center justify-center gap-2 text-sm font-semibold text-foreground/60">
+              <p className="flex items-center justify-center gap-2 text-xs font-semibold text-foreground/60 sm:text-sm">
                 <Target size={14} />
                 選取中的成語
               </p>
-              <p className="text-base leading-relaxed text-foreground">{currentIdiom.idiom.definition}</p>
+              <p className="text-sm leading-relaxed text-foreground sm:text-base">{currentIdiom.idiom.definition}</p>
             </motion.div>
           ) : (
             <motion.div
@@ -299,11 +299,11 @@ export function GameHeader() {
               exit={{ opacity: 0, y: -10 }}
               className="space-y-2"
             >
-              <p className="flex items-center justify-center gap-2 text-sm font-semibold text-foreground/60">
+              <p className="flex items-center justify-center gap-2 text-xs font-semibold text-foreground/60 sm:text-sm">
                 <Sparkles size={14} />
                 玩法提示
               </p>
-              <p className="text-base leading-relaxed text-foreground/70">
+              <p className="text-sm leading-relaxed text-foreground/70 sm:text-base">
                 點格子後從下方選字。答對會自動推進，答錯會扣分，卡關時可以使用提示。
               </p>
             </motion.div>
@@ -318,7 +318,7 @@ export function GameHeader() {
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
-            className={cn('absolute -bottom-4 left-1/2 -translate-x-1/2 rounded-full px-4 py-2 text-sm font-bold shadow-lg', toneClassName(toast.tone))}
+            className={cn('absolute -bottom-3 left-1/2 z-20 w-max max-w-[calc(100%-1rem)] -translate-x-1/2 rounded-full px-4 py-2 text-xs font-bold shadow-lg sm:-bottom-4 sm:text-sm', toneClassName(toast.tone))}
           >
             {toast.text}
           </motion.div>
@@ -332,15 +332,22 @@ export function GameBoard() {
   const { grid, userGrid, revealed, selectedCell, selectCell, clearCell, highlightedCells, isReady } = useGame();
 
   if (!isReady) {
-    return <div className="glass min-h-[940px] w-full max-w-[1080px] rounded-[2.5rem]" />;
+    return <div className="glass min-h-[360px] w-full max-w-[1080px] rounded-[1.75rem] sm:min-h-[940px] sm:rounded-[2.5rem]" />;
   }
 
   return (
-    <div className="w-full max-w-[1080px] rounded-[2.5rem] border border-white/50 bg-grid-bg/55 p-8 shadow-xl backdrop-blur-sm">
-      <div className="grid grid-cols-8 gap-4">
+    <div className="w-full max-w-[1080px] rounded-[1.8rem] border border-white/50 bg-grid-bg/55 p-3 shadow-xl backdrop-blur-sm sm:rounded-[2.5rem] sm:p-8">
+      <div className="grid grid-cols-8 gap-1.5 sm:gap-4">
         {grid.map((row, y) =>
           row.map((cell, x) => {
-            if (!cell) return <div key={`${y}-${x}`} className="h-24 w-24" />;
+            if (!cell) {
+              return (
+                <div
+                  key={`${y}-${x}`}
+                  className="h-[clamp(2.5rem,10vw,6rem)] w-[clamp(2.5rem,10vw,6rem)] sm:h-24 sm:w-24"
+                />
+              );
+            }
 
             const isSelected = selectedCell?.[0] === y && selectedCell?.[1] === x;
             const isSolved = revealed[y][x];
@@ -363,9 +370,9 @@ export function GameBoard() {
                   selectCell(y, x);
                 }}
                 className={cn(
-                  'cell-shadow relative flex h-24 w-24 items-center justify-center rounded-[1.35rem] text-[2.8rem] font-bold transition-all duration-200',
-                  isSelected && 'z-10 ring-4 ring-primary/90 ring-offset-4 ring-offset-[#f5eed1] shadow-[0_0_0_6px_rgba(38,139,210,0.18),0_18px_30px_rgba(38,139,210,0.18)]',
-                  isHighlightedPath && !isSelected && 'bg-sky-100 text-primary shadow-[0_10px_24px_rgba(38,139,210,0.12)]',
+                  'cell-shadow relative flex h-[clamp(2.5rem,10vw,6rem)] w-[clamp(2.5rem,10vw,6rem)] items-center justify-center rounded-[0.95rem] text-[clamp(1.35rem,5.2vw,2.8rem)] font-bold transition-all duration-200 sm:h-24 sm:w-24 sm:rounded-[1.35rem] sm:text-[2.8rem]',
+                  isSelected && 'z-10 ring-2 ring-primary/90 ring-offset-2 ring-offset-[#f5eed1] shadow-[0_0_0_5px_rgba(38,139,210,0.18),0_10px_18px_rgba(38,139,210,0.18)] sm:ring-4 sm:ring-offset-4 sm:shadow-[0_0_0_6px_rgba(38,139,210,0.18),0_18px_30px_rgba(38,139,210,0.18)]',
+                  isHighlightedPath && !isSelected && 'bg-sky-100 text-primary shadow-[0_6px_16px_rgba(38,139,210,0.12)] sm:shadow-[0_10px_24px_rgba(38,139,210,0.12)]',
                   isSolved && 'bg-primary text-white',
                   !isSolved && !isHighlightedPath && 'cursor-pointer bg-white text-primary',
                   !isSolved && !guess && 'bg-secondary/20',
@@ -373,10 +380,10 @@ export function GameBoard() {
                 )}
               >
                 {isSelected && !isSolved ? (
-                  <span className="pointer-events-none absolute inset-1 rounded-[1.05rem] border-2 border-primary/35 bg-sky-100/85" />
+                  <span className="pointer-events-none absolute inset-0.5 rounded-[0.8rem] border-2 border-primary/35 bg-sky-100/85 sm:inset-1 sm:rounded-[1.05rem]" />
                 ) : null}
                 {isSelected && !isSolved ? (
-                  <span className="absolute -right-1.5 -top-1.5 h-4.5 w-4.5 rounded-full border-2 border-white bg-primary shadow-md" />
+                  <span className="absolute -right-1 -top-1 h-3.5 w-3.5 rounded-full border-2 border-white bg-primary shadow-md sm:-right-1.5 sm:-top-1.5 sm:h-4.5 sm:w-4.5" />
                 ) : null}
                 {isSolved ? cell.char : guess}
               </motion.button>
@@ -394,14 +401,14 @@ export function GameDock() {
   if (!isReady) return null;
 
   return (
-    <div className="w-full space-y-4 overflow-hidden">
-      <div className="flex items-center justify-between text-sm font-semibold text-foreground/70">
+    <div className="w-full space-y-3 overflow-hidden sm:space-y-4">
+      <div className="flex items-center justify-between text-xs font-semibold text-foreground/70 sm:text-sm">
         <span>選字池</span>
-        <span className="text-xs text-foreground/55">點錯字可直接點格子清空</span>
+        <span className="text-[11px] text-foreground/55 sm:text-xs">點錯字可直接點格子清空</span>
       </div>
 
-      <div className="glass rounded-[1.75rem] p-5">
-        <div className="grid grid-cols-4 gap-3">
+      <div className="glass rounded-[1.5rem] p-3 sm:rounded-[1.75rem] sm:p-5">
+        <div className="grid grid-cols-5 gap-2 sm:grid-cols-4 sm:gap-3">
           {candidates.map((char, index) => (
             <motion.button
               key={`${char}-${index}`}
@@ -411,7 +418,7 @@ export function GameDock() {
               onClick={() => fillCell(char)}
               disabled={!selectedCell}
               className={cn(
-                'h-16 w-full rounded-2xl border-b-4 border-primary/20 bg-white text-3xl font-bold text-primary shadow-md transition-all hover:shadow-lg',
+                'min-h-11 w-full rounded-[1rem] border-b-4 border-primary/20 bg-white px-1 text-[1.7rem] font-bold text-primary shadow-md transition-all hover:shadow-lg sm:h-16 sm:rounded-2xl sm:text-3xl',
                 !selectedCell && 'cursor-not-allowed grayscale opacity-50'
               )}
             >
