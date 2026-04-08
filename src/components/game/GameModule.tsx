@@ -67,6 +67,7 @@ export function GameHeader() {
     resetLevel,
     isReady,
   } = useGame();
+  const [showResetConfirm, setShowResetConfirm] = React.useState(false);
 
   if (!isReady) {
     return (
@@ -98,7 +99,7 @@ export function GameHeader() {
           </button>
           <button
             type="button"
-            onClick={resetLevel}
+            onClick={() => setShowResetConfirm((prev) => !prev)}
             className="glass rounded-full p-2 transition-colors hover:bg-white/40"
             aria-label="重新開始本關"
           >
@@ -106,6 +107,41 @@ export function GameHeader() {
           </button>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showResetConfirm ? (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.96 }}
+            className="glass absolute right-0 top-14 z-30 w-[280px] rounded-[1.5rem] p-4 text-left shadow-xl"
+          >
+            <p className="text-sm font-semibold text-foreground">重新開始本關？</p>
+            <p className="mt-2 text-sm leading-relaxed text-foreground/70">
+              目前進度會清空，並扣除 10 分。
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowResetConfirm(false)}
+                className="rounded-full px-4 py-2 text-sm font-semibold text-foreground/70 transition hover:bg-white/50"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowResetConfirm(false);
+                  resetLevel();
+                }}
+                className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-primary/90"
+              >
+                確認重開
+              </button>
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
       <div className="grid grid-cols-2 gap-3 text-left text-sm">
         <div className="glass rounded-2xl p-3">
