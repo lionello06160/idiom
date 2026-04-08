@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fdf6e3;
+  --foreground: #657b83;
+  --primary: #268bd2;
+  --secondary: #b58900;
+  --accent: #d33682;
+  --grid-bg: #eee8d5;
+  --cell-bg: #2aa198;
+  --cell-empty: #fdf6e3;
+  --cell-hover: #93a1a1;
+  --glass: rgba(255, 255, 255, 0.2);
+}
+
+@theme {
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-accent: var(--accent);
+}
+
+body {
+  background: radial-gradient(circle at center, #fdf6e3 0%, #eee8d5 100%);
+  color: #657b83;
+  font-family: "Outfit", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  min-height: 100vh;
+}
+
+.glass {
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+}
+
+.cell-shadow {
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.title-gradient {
+  background: linear-gradient(135deg, #b58900 0%, #d33682 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
