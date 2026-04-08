@@ -24,6 +24,7 @@ export interface SharedGameState {
   userGrid: string[][];
   revealed: boolean[][];
   placedIdioms: PlacedIdiom[];
+  activeIdiomKey: string | null;
   selectedCell: SelectedCell;
   candidates: string[];
   isComplete: boolean;
@@ -77,7 +78,8 @@ export function countSolvedCells(
 export function getIdiomForCell(
   placedIdioms: PlacedIdiom[],
   grid: (GridCell | null)[][],
-  cell: SelectedCell
+  cell: SelectedCell,
+  activeIdiomKey?: string | null
 ) {
   if (!cell) return null;
 
@@ -85,16 +87,19 @@ export function getIdiomForCell(
   const target = grid[row]?.[col];
   if (!target) return null;
 
-  return (
-    placedIdioms.find(({ idiom, x, y, direction }) => {
-      for (let offset = 0; offset < idiom.word.length; offset += 1) {
-        const idiomRow = direction === 'V' ? y + offset : y;
-        const idiomCol = direction === 'H' ? x + offset : x;
-        if (idiomRow === row && idiomCol === col) return true;
-      }
-      return false;
-    }) ?? null
-  );
+  const matches = placedIdioms.filter(({ idiom, x, y, direction }) => {
+    for (let offset = 0; offset < idiom.word.length; offset += 1) {
+      const idiomRow = direction === 'V' ? y + offset : y;
+      const idiomCol = direction === 'H' ? x + offset : x;
+      if (idiomRow === row && idiomCol === col) return true;
+    }
+    return false;
+  });
+
+  if (!matches.length) return null;
+  if (!activeIdiomKey) return matches[0];
+
+  return matches.find((placed) => getPlacedIdiomKey(placed) === activeIdiomKey) ?? matches[0];
 }
 
 export function getIdiomCells(placed: PlacedIdiom): [number, number][] {
@@ -102,6 +107,10 @@ export function getIdiomCells(placed: PlacedIdiom): [number, number][] {
     placed.direction === 'V' ? placed.y + offset : placed.y,
     placed.direction === 'H' ? placed.x + offset : placed.x,
   ]);
+}
+
+export function getPlacedIdiomKey(placed: PlacedIdiom) {
+  return `${placed.idiom.word}:${placed.direction}:${placed.x}:${placed.y}`;
 }
 
 export function findNextEditableCell(
@@ -123,9 +132,10 @@ export function findNextEditableCellInIdiom(
   grid: (GridCell | null)[][],
   revealed: boolean[][],
   userGrid: string[][],
-  start: SelectedCell
+  start: SelectedCell,
+  activeIdiomKey?: string | null
 ): SelectedCell {
-  const currentIdiom = getIdiomForCell(placedIdioms, grid, start);
+  const currentIdiom = getIdiomForCell(placedIdioms, grid, start, activeIdiomKey);
   if (!currentIdiom || !start) return null;
 
   const cells = getIdiomCells(currentIdiom).filter(([row, col]) => {
@@ -224,6 +234,7 @@ export function createSharedLevelState(level: number, previousScore = 0): Shared
     userGrid,
     revealed,
     placedIdioms: idioms,
+    activeIdiomKey: null,
     selectedCell: findNextEditableCell(grid, revealed, userGrid),
     candidates,
     isComplete: false,

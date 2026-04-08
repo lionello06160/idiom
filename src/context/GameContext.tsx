@@ -10,6 +10,7 @@ import {
   findNextEditableCellInIdiom,
   getIdiomCells,
   getIdiomForCell,
+  getPlacedIdiomKey,
   type SelectedCell,
   type SharedGameState,
   type ToastMessage,
@@ -227,8 +228,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, [state.toast]);
 
   const currentIdiom = useMemo(
-    () => getIdiomForCell(state.placedIdioms, state.grid, state.selectedCell),
-    [state.placedIdioms, state.grid, state.selectedCell]
+    () => getIdiomForCell(state.placedIdioms, state.grid, state.selectedCell, state.activeIdiomKey),
+    [state.activeIdiomKey, state.placedIdioms, state.grid, state.selectedCell]
   );
 
   const highlightedCells = useMemo(
@@ -245,7 +246,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     (row: number, col: number) => {
       applyLocalUpdate((prev) => {
         if (!prev.grid[row]?.[col] || prev.revealed[row][col]) return null;
-        return { next: { ...prev, selectedCell: [row, col] }, toast: null };
+        const idiom = getIdiomForCell(prev.placedIdioms, prev.grid, [row, col], prev.activeIdiomKey);
+        return {
+          next: {
+            ...prev,
+            selectedCell: [row, col],
+            activeIdiomKey: idiom ? getPlacedIdiomKey(idiom) : prev.activeIdiomKey,
+          },
+          toast: null,
+        };
       });
     },
     [applyLocalUpdate]
@@ -256,14 +265,28 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       applyLocalUpdate((prev) => {
         if (!prev.grid[row]?.[col] || prev.revealed[row][col]) return null;
         if (!prev.userGrid[row][col]) {
-          return { next: { ...prev, selectedCell: [row, col] }, toast: null };
+          const idiom = getIdiomForCell(prev.placedIdioms, prev.grid, [row, col], prev.activeIdiomKey);
+          return {
+            next: {
+              ...prev,
+              selectedCell: [row, col],
+              activeIdiomKey: idiom ? getPlacedIdiomKey(idiom) : prev.activeIdiomKey,
+            },
+            toast: null,
+          };
         }
 
         const userGrid = cloneGrid(prev.userGrid);
         userGrid[row][col] = '';
+        const idiom = getIdiomForCell(prev.placedIdioms, prev.grid, [row, col], prev.activeIdiomKey);
 
         return {
-          next: { ...prev, userGrid, selectedCell: [row, col] },
+          next: {
+            ...prev,
+            userGrid,
+            selectedCell: [row, col],
+            activeIdiomKey: idiom ? getPlacedIdiomKey(idiom) : prev.activeIdiomKey,
+          },
           toast: { id: Date.now(), text: '已清空這一格', tone: 'warning' },
         };
       });
@@ -287,6 +310,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         const revealed = cloneGrid(prev.revealed);
         const candidates = [...prev.candidates];
         let selectedCell: SelectedCell = prev.selectedCell;
+        let activeIdiomKey = prev.activeIdiomKey;
         let score = prev.stats.score;
         let streak = prev.stats.streak;
         let mistakes = prev.stats.mistakes;
@@ -322,11 +346,23 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
         if (isComplete) {
           selectedCell = null;
+          activeIdiomKey = null;
           score += Math.max(20 - prev.stats.hintsUsed * 2, 6);
           toast = { id: Date.now(), text: `第 ${prev.level} 關完成`, tone: 'success' };
         } else {
+          const currentIdiom =
+            getIdiomForCell(prev.placedIdioms, prev.grid, prev.selectedCell, prev.activeIdiomKey) ??
+            getIdiomForCell(prev.placedIdioms, prev.grid, [row, col], prev.activeIdiomKey);
+          activeIdiomKey = currentIdiom ? getPlacedIdiomKey(currentIdiom) : prev.activeIdiomKey;
           selectedCell =
-            findNextEditableCellInIdiom(prev.placedIdioms, prev.grid, revealed, userGrid, prev.selectedCell) ??
+            findNextEditableCellInIdiom(
+              prev.placedIdioms,
+              prev.grid,
+              revealed,
+              userGrid,
+              prev.selectedCell,
+              activeIdiomKey
+            ) ??
             findNextEditableCell(prev.grid, revealed, userGrid, prev.selectedCell);
         }
 
@@ -337,6 +373,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             revealed,
             candidates,
             selectedCell,
+            activeIdiomKey,
             isComplete,
             stats: {
               ...prev.stats,
@@ -380,9 +417,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
         const solvedCells = countSolvedCells(prev.grid, userGrid, revealed);
         const isComplete = solvedCells === prev.stats.totalCells;
+        const currentIdiom = getIdiomForCell(prev.placedIdioms, prev.grid, targetCell, prev.activeIdiomKey);
+        const activeIdiomKey = currentIdiom ? getPlacedIdiomKey(currentIdiom) : prev.activeIdiomKey;
         const selectedCell = isComplete
           ? null
-          : findNextEditableCellInIdiom(prev.placedIdioms, prev.grid, revealed, userGrid, targetCell) ??
+          : findNextEditableCellInIdiom(
+              prev.placedIdioms,
+              prev.grid,
+              revealed,
+              userGrid,
+              targetCell,
+              activeIdiomKey
+            ) ??
             findNextEditableCell(prev.grid, revealed, userGrid, targetCell);
 
         return {
@@ -392,6 +438,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             userGrid,
             candidates,
             selectedCell,
+            activeIdiomKey: isComplete ? null : activeIdiomKey,
             isComplete,
             stats: {
               ...prev.stats,
