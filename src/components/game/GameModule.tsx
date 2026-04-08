@@ -30,6 +30,31 @@ function toneClassName(tone: 'success' | 'warning' | 'error') {
   }
 }
 
+function syncStatusCopy(status: 'connecting' | 'synced' | 'syncing' | 'offline') {
+  switch (status) {
+    case 'connecting':
+      return {
+        label: '連線中',
+        className: 'bg-slate-100 text-slate-700',
+      };
+    case 'syncing':
+      return {
+        label: '同步中',
+        className: 'bg-amber-100 text-amber-700',
+      };
+    case 'offline':
+      return {
+        label: '連線中斷',
+        className: 'bg-rose-100 text-rose-700',
+      };
+    default:
+      return {
+        label: '已即時同步',
+        className: 'bg-emerald-100 text-emerald-700',
+      };
+  }
+}
+
 function playToneSequence(
   context: AudioContext,
   tones: Array<{ frequency: number; duration: number; gain: number }>,
@@ -159,12 +184,14 @@ export function GameHeader() {
     stats,
     progressPercent,
     currentIdiom,
+    syncStatus,
     toast,
     useHint,
     resetLevel,
     isReady,
   } = useGame();
   const [showResetConfirm, setShowResetConfirm] = React.useState(false);
+  const syncCopy = syncStatusCopy(syncStatus);
 
   if (!isReady) {
     return (
@@ -203,6 +230,17 @@ export function GameHeader() {
             <RotateCcw size={18} />
           </button>
         </div>
+      </div>
+
+      <div className="flex justify-start">
+        <span
+          className={cn(
+            'rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-[0.08em] sm:text-xs',
+            syncCopy.className
+          )}
+        >
+          {syncCopy.label}
+        </span>
       </div>
 
       <div className="glass rounded-[1.25rem] p-3 text-left sm:hidden">

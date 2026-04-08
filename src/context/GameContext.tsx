@@ -19,6 +19,7 @@ interface GameState extends SharedGameState {
   toast: ToastMessage | null;
   isReady: boolean;
   syncVersion: number;
+  syncStatus: 'connecting' | 'synced' | 'syncing' | 'offline';
 }
 
 interface ServerSnapshot {
@@ -43,6 +44,7 @@ const EMPTY_STATE: GameState = {
   isReady: false,
   toast: null,
   syncVersion: 0,
+  syncStatus: 'connecting',
 };
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -59,6 +61,7 @@ function withToast(state: SharedGameState, version: number, toast: ToastMessage 
     toast,
     isReady: true,
     syncVersion: version,
+    syncStatus: 'synced',
   };
 }
 
@@ -67,12 +70,27 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const syncVersionRef = useRef(0);
   const syncingRef = useRef(false);
   const pendingSyncRef = useRef<SharedGameState | null>(null);
+  const syncStatusTimeoutRef = useRef<number | null>(null);
+
+  const scheduleSyncedState = useCallback(() => {
+    if (typeof window === 'undefined') return;
+
+    if (syncStatusTimeoutRef.current) {
+      window.clearTimeout(syncStatusTimeoutRef.current);
+    }
+
+    syncStatusTimeoutRef.current = window.setTimeout(() => {
+      setState((prev) => ({ ...prev, syncStatus: 'synced' }));
+      syncStatusTimeoutRef.current = null;
+    }, 600);
+  }, []);
 
   const pushStateToServer = useCallback(async (nextState: SharedGameState, toast: ToastMessage | null) => {
     pendingSyncRef.current = nextState;
     if (syncingRef.current) return;
 
     syncingRef.current = true;
+    setState((prev) => ({ ...prev, syncStatus: 'syncing' }));
 
     while (pendingSyncRef.current) {
       const payload = pendingSyncRef.current;
@@ -86,16 +104,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       if (!response.ok) {
         syncingRef.current = false;
+        setState((prev) => ({ ...prev, syncStatus: 'offline' }));
         throw new Error('Failed to sync shared game state');
       }
 
       const snapshot = (await response.json()) as ServerSnapshot;
       syncVersionRef.current = snapshot.version;
-      setState(withToast(snapshot.state, snapshot.version, toast));
+      setState({ ...withToast(snapshot.state, snapshot.version, toast), syncStatus: 'syncing' });
     }
 
     syncingRef.current = false;
-  }, []);
+    scheduleSyncedState();
+  }, [scheduleSyncedState]);
 
   const applyLocalUpdate = useCallback(
     (updater: (prev: SharedGameState) => { next: SharedGameState; toast: ToastMessage | null } | null) => {
@@ -108,6 +128,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           isReady: true,
           syncVersion: prev.syncVersion,
           toast: result.toast,
+          syncStatus: 'syncing' as const,
         };
 
         void pushStateToServer(result.next, result.toast);
@@ -127,16 +148,19 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
         syncVersionRef.current = snapshot.version;
         setState(
-          withToast(snapshot.state, snapshot.version, {
-            id: Date.now(),
-            text: `已連線到共享棋盤`,
-            tone: 'warning',
-          })
+          {
+            ...withToast(snapshot.state, snapshot.version, {
+              id: Date.now(),
+              text: `已連線到共享棋盤`,
+              tone: 'warning',
+            }),
+            syncStatus: 'synced',
+          }
         );
       } catch {
         if (!active) return;
         const fallback = createSharedLevelState(1);
-        setState(withToast(fallback, 0, { id: Date.now(), text: '離線模式', tone: 'warning' }));
+        setState({ ...withToast(fallback, 0, { id: Date.now(), text: '離線模式', tone: 'warning' }), syncStatus: 'offline' });
       }
     };
 
@@ -152,6 +176,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
     const stream = new EventSource('/api/game-stream');
 
+    stream.onopen = () => {
+      setState((prev) => ({ ...prev, syncStatus: syncingRef.current ? 'syncing' : 'synced' }));
+    };
+
+    stream.onerror = () => {
+      setState((prev) => ({ ...prev, syncStatus: 'offline' }));
+    };
+
     stream.addEventListener('update', async (event) => {
       const { version } = JSON.parse((event as MessageEvent).data) as { version: number };
       if (version <= syncVersionRef.current) return;
@@ -162,16 +194,27 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       syncVersionRef.current = snapshot.version;
       setState((prev) =>
-        withToast(
-          snapshot.state,
-          snapshot.version,
-          prev.toast ?? { id: Date.now(), text: '其他裝置已更新棋盤', tone: 'warning' }
-        )
+        ({
+          ...withToast(
+            snapshot.state,
+            snapshot.version,
+            prev.toast ?? { id: Date.now(), text: '其他裝置已更新棋盤', tone: 'warning' }
+          ),
+          syncStatus: 'synced',
+        })
       );
     });
 
     return () => stream.close();
   }, [state.isReady]);
+
+  useEffect(() => {
+    return () => {
+      if (syncStatusTimeoutRef.current) {
+        window.clearTimeout(syncStatusTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!state.toast) return undefined;
