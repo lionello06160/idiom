@@ -139,7 +139,7 @@ export function GameRoot({ children }: { children: React.ReactNode }) {
       />
 
       <div className="relative z-10 grid min-h-[calc(100vh-1.5rem)] w-full grid-rows-[auto_minmax(0,1fr)_auto] gap-3 lg:min-h-[calc(100vh-3rem)] lg:grid-cols-[340px_minmax(980px,1fr)] lg:grid-rows-1 lg:gap-8">
-        <div className="contents lg:flex lg:min-h-0 lg:flex-col lg:justify-between lg:gap-8">
+        <div className="contents lg:flex lg:min-h-0 lg:flex-col lg:justify-start lg:gap-5">
           <div className="order-1">{header}</div>
           <div className="order-3">{dock}</div>
         </div>
