@@ -4,7 +4,7 @@ import { isValidSharedState } from '@/lib/game-shared';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  return Response.json(getServerSnapshot());
+  return Response.json(await getServerSnapshot());
 }
 
 export async function PUT(request: Request) {
@@ -15,6 +15,6 @@ export async function PUT(request: Request) {
     return Response.json({ error: 'Invalid state payload' }, { status: 400 });
   }
 
-  const snapshot = setServerState(candidate);
+  const snapshot = await setServerState(candidate);
   return Response.json(snapshot);
 }
