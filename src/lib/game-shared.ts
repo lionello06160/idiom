@@ -34,6 +34,8 @@ export interface SharedGameState {
 export const GRID_SIZE = 8;
 const BASE_HINT_REVEAL_RATE = 0.18;
 const EXTRA_CANDIDATES = 6;
+const MIN_VISIBLE_CELLS = 3;
+const MIN_INTERSECTION_HINTS = 2;
 const ALL_IDIOM_CHARS = Array.from(new Set(IDIOMS.flatMap((idiom) => Array.from(idiom.word))));
 
 export function cloneGrid<T>(grid: T[][]) {
@@ -154,6 +156,25 @@ function getEditableCoordinates(
   return coordinates;
 }
 
+function getIntersectionCells(placedIdioms: PlacedIdiom[]) {
+  const counts = new Map<string, number>();
+
+  placedIdioms.forEach((placed) => {
+    getIdiomCells(placed).forEach(([row, col]) => {
+      const key = `${row},${col}`;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    });
+  });
+
+  return Array.from(counts.entries())
+    .filter(([, count]) => count > 1)
+    .map(([key]) => key.split(',').map(Number) as [number, number]);
+}
+
+function countVisibleCells(revealed: boolean[][]) {
+  return revealed.flat().filter(Boolean).length;
+}
+
 export function createSharedLevelState(level: number, previousScore = 0): SharedGameState {
   const generator = new GameGenerator(GRID_SIZE);
   const idiomCount = Math.min(5 + Math.floor(level / 2), 10);
@@ -166,6 +187,25 @@ export function createSharedLevelState(level: number, previousScore = 0): Shared
       return Math.random() < Math.max(0.08, BASE_HINT_REVEAL_RATE - level * 0.01);
     })
   );
+
+  const intersectionCells = shuffle(getIntersectionCells(idioms));
+
+  intersectionCells.slice(0, MIN_INTERSECTION_HINTS).forEach(([row, col]) => {
+    revealed[row][col] = true;
+  });
+
+  if (countVisibleCells(revealed) < MIN_VISIBLE_CELLS) {
+    const fallbackCells = shuffle(
+      grid.flatMap((row, y) =>
+        row.flatMap((cell, x) => (cell ? [[y, x] as [number, number]] : []))
+      )
+    );
+
+    for (const [row, col] of fallbackCells) {
+      if (countVisibleCells(revealed) >= MIN_VISIBLE_CELLS) break;
+      revealed[row][col] = true;
+    }
+  }
 
   const hiddenChars = grid.flatMap((row, y) =>
     row.flatMap((cell, x) => (cell && !revealed[y][x] ? [cell.char] : []))
