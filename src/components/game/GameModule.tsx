@@ -30,6 +30,102 @@ function toneClassName(tone: 'success' | 'warning' | 'error') {
   }
 }
 
+function playToneSequence(
+  context: AudioContext,
+  tones: Array<{ frequency: number; duration: number; gain: number }>,
+  type: OscillatorType = 'sine'
+) {
+  let offset = context.currentTime;
+
+  tones.forEach(({ frequency, duration, gain }) => {
+    const oscillator = context.createOscillator();
+    const gainNode = context.createGain();
+
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, offset);
+
+    gainNode.gain.setValueAtTime(0.0001, offset);
+    gainNode.gain.exponentialRampToValueAtTime(gain, offset + 0.02);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, offset + duration);
+
+    oscillator.connect(gainNode);
+    gainNode.connect(context.destination);
+
+    oscillator.start(offset);
+    oscillator.stop(offset + duration);
+
+    offset += duration * 0.92;
+  });
+}
+
+function GameSoundEffects() {
+  const { toast, isComplete } = useGame();
+  const audioContextRef = React.useRef<AudioContext | null>(null);
+  const lastToastIdRef = React.useRef<number | null>(null);
+  const completedRef = React.useRef(false);
+
+  const getAudioContext = React.useCallback(() => {
+    if (typeof window === 'undefined') return null;
+
+    const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return null;
+
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContextClass();
+    }
+
+    if (audioContextRef.current.state === 'suspended') {
+      void audioContextRef.current.resume();
+    }
+
+    return audioContextRef.current;
+  }, []);
+
+  React.useEffect(() => {
+    if (!toast || toast.id === lastToastIdRef.current) return;
+    lastToastIdRef.current = toast.id;
+
+    const context = getAudioContext();
+    if (!context) return;
+
+    if (toast.tone === 'error') {
+      playToneSequence(
+        context,
+        [
+          { frequency: 280, duration: 0.12, gain: 0.045 },
+          { frequency: 220, duration: 0.16, gain: 0.04 },
+        ],
+        'triangle'
+      );
+    }
+  }, [getAudioContext, toast]);
+
+  React.useEffect(() => {
+    if (isComplete && !completedRef.current) {
+      completedRef.current = true;
+      const context = getAudioContext();
+      if (!context) return;
+
+      playToneSequence(
+        context,
+        [
+          { frequency: 523.25, duration: 0.16, gain: 0.03 },
+          { frequency: 659.25, duration: 0.16, gain: 0.035 },
+          { frequency: 783.99, duration: 0.2, gain: 0.04 },
+          { frequency: 1046.5, duration: 0.34, gain: 0.05 },
+        ],
+        'sine'
+      );
+    }
+
+    if (!isComplete) {
+      completedRef.current = false;
+    }
+  }, [getAudioContext, isComplete]);
+
+  return null;
+}
+
 export function GameRoot({ children }: { children: React.ReactNode }) {
   const childArray = React.Children.toArray(children);
   const [header, board, dock, overlay] = childArray;
@@ -50,6 +146,7 @@ export function GameRoot({ children }: { children: React.ReactNode }) {
         <div className="flex min-h-0 items-start justify-center pt-2">
           {board}
         </div>
+        <GameSoundEffects />
         {overlay}
       </div>
     </div>
