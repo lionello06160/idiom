@@ -196,7 +196,7 @@ export function GameHeader() {
 }
 
 export function GameBoard() {
-  const { grid, userGrid, revealed, selectedCell, selectCell, clearCell, isReady } = useGame();
+  const { grid, userGrid, revealed, selectedCell, selectCell, clearCell, highlightedCells, isReady } = useGame();
 
   if (!isReady) {
     return <div className="glass min-h-[940px] w-full max-w-[1080px] rounded-[2.5rem]" />;
@@ -213,6 +213,7 @@ export function GameBoard() {
             const isSolved = revealed[y][x];
             const guess = userGrid[y][x];
             const isWrong = Boolean(guess) && !isSolved && guess !== cell.char;
+            const isHighlightedPath = highlightedCells.some(([row, col]) => row === y && col === x);
 
             return (
               <motion.button
@@ -231,14 +232,15 @@ export function GameBoard() {
                 className={cn(
                   'cell-shadow relative flex h-24 w-24 items-center justify-center rounded-[1.35rem] text-[2.8rem] font-bold transition-all duration-200',
                   isSelected && 'z-10 ring-4 ring-primary/90 ring-offset-4 ring-offset-[#f5eed1] shadow-[0_0_0_6px_rgba(38,139,210,0.18),0_18px_30px_rgba(38,139,210,0.18)]',
+                  isHighlightedPath && !isSelected && 'bg-sky-100 text-primary shadow-[0_10px_24px_rgba(38,139,210,0.12)]',
                   isSolved && 'bg-primary text-white',
-                  !isSolved && 'cursor-pointer bg-white text-primary',
+                  !isSolved && !isHighlightedPath && 'cursor-pointer bg-white text-primary',
                   !isSolved && !guess && 'bg-secondary/20',
                   isWrong && 'bg-rose-500 text-white'
                 )}
               >
                 {isSelected && !isSolved ? (
-                  <span className="pointer-events-none absolute inset-1 rounded-[1.05rem] border-2 border-primary/35" />
+                  <span className="pointer-events-none absolute inset-1 rounded-[1.05rem] border-2 border-primary/35 bg-sky-100/85" />
                 ) : null}
                 {isSelected && !isSolved ? (
                   <span className="absolute -right-1.5 -top-1.5 h-4.5 w-4.5 rounded-full border-2 border-white bg-primary shadow-md" />

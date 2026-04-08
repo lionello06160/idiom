@@ -1,309 +1,177 @@
 'use client';
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { GameGenerator, type GridCell, type PlacedIdiom } from '@/lib/generator';
-import { IDIOMS } from '@/lib/idioms';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import type { PlacedIdiom } from '@/lib/generator';
+import {
+  cloneGrid,
+  countSolvedCells,
+  createSharedLevelState,
+  findNextEditableCell,
+  findNextEditableCellInIdiom,
+  getIdiomCells,
+  getIdiomForCell,
+  type SelectedCell,
+  type SharedGameState,
+  type ToastMessage,
+} from '@/lib/game-shared';
 
-type SelectedCell = [number, number] | null;
-type FeedbackTone = 'success' | 'warning' | 'error';
-
-interface ToastMessage {
-  id: number;
-  text: string;
-  tone: FeedbackTone;
-}
-
-interface GameStats {
-  score: number;
-  streak: number;
-  mistakes: number;
-  hintsUsed: number;
-  solvedCells: number;
-  totalCells: number;
-}
-
-interface GameState {
-  grid: (GridCell | null)[][];
-  userGrid: string[][];
-  revealed: boolean[][];
-  placedIdioms: PlacedIdiom[];
-  selectedCell: SelectedCell;
-  candidates: string[];
-  isComplete: boolean;
-  level: number;
-  stats: GameStats;
+interface GameState extends SharedGameState {
   toast: ToastMessage | null;
   isReady: boolean;
+  syncVersion: number;
 }
 
-interface PersistedGameState {
-  grid: (GridCell | null)[][];
-  userGrid: string[][];
-  revealed: boolean[][];
-  placedIdioms: PlacedIdiom[];
-  selectedCell: SelectedCell;
-  candidates: string[];
-  isComplete: boolean;
-  level: number;
-  stats: GameStats;
+interface ServerSnapshot {
+  state: SharedGameState;
+  version: number;
 }
 
 interface GameContextType extends GameState {
   progressPercent: number;
   currentIdiom: PlacedIdiom | null;
+  highlightedCells: [number, number][];
   selectCell: (row: number, col: number) => void;
   clearCell: (row: number, col: number) => void;
   fillCell: (char: string) => void;
-  clearSelectedCell: () => void;
   useHint: () => void;
   nextLevel: () => void;
   resetLevel: () => void;
 }
 
-const GRID_SIZE = 8;
-const BASE_HINT_REVEAL_RATE = 0.18;
-const EXTRA_CANDIDATES = 6;
-const STORAGE_KEY = 'idiom-game-progress-v1';
-const ALL_IDIOM_CHARS = Array.from(new Set(IDIOMS.flatMap((idiom) => Array.from(idiom.word))));
-
-const EMPTY_STATS: GameStats = {
-  score: 0,
-  streak: 0,
-  mistakes: 0,
-  hintsUsed: 0,
-  solvedCells: 0,
-  totalCells: 0,
-};
-
 const EMPTY_STATE: GameState = {
-  grid: [],
-  userGrid: [],
-  revealed: [],
-  placedIdioms: [],
-  selectedCell: null,
-  candidates: [],
-  isComplete: false,
-  level: 1,
-  stats: EMPTY_STATS,
-  toast: null,
+  ...createSharedLevelState(1),
   isReady: false,
+  toast: null,
+  syncVersion: 0,
 };
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
-function cloneGrid<T>(grid: T[][]) {
-  return grid.map((row) => [...row]);
+async function fetchServerSnapshot(): Promise<ServerSnapshot> {
+  const response = await fetch('/api/game-state', { cache: 'no-store' });
+  if (!response.ok) throw new Error('Failed to load shared game state');
+  return response.json();
 }
 
-function shuffle<T>(items: T[]) {
-  const next = [...items];
-
-  for (let i = next.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [next[i], next[j]] = [next[j], next[i]];
-  }
-
-  return next;
-}
-
-function getTotalCells(grid: (GridCell | null)[][]) {
-  return grid.flat().filter(Boolean).length;
-}
-
-function countSolvedCells(
-  grid: (GridCell | null)[][],
-  userGrid: string[][],
-  revealed: boolean[][]
-) {
-  let solved = 0;
-
-  grid.forEach((row, y) => {
-    row.forEach((cell, x) => {
-      if (!cell) return;
-      if (revealed[y][x] || userGrid[y][x] === cell.char) {
-        solved += 1;
-      }
-    });
-  });
-
-  return solved;
-}
-
-function findNextEditableCell(
-  grid: (GridCell | null)[][],
-  revealed: boolean[][],
-  userGrid: string[][],
-  start?: SelectedCell
-): SelectedCell {
-  if (!grid.length) return null;
-
-  const coordinates: [number, number][] = [];
-  grid.forEach((row, y) => {
-    row.forEach((cell, x) => {
-      if (cell && !revealed[y][x] && userGrid[y][x] !== cell.char) {
-        coordinates.push([y, x]);
-      }
-    });
-  });
-
-  if (!coordinates.length) return null;
-  if (!start) return coordinates[0];
-
-  const index = coordinates.findIndex(([row, col]) => row === start[0] && col === start[1]);
-  return coordinates[(index + 1 + coordinates.length) % coordinates.length];
-}
-
-function getIdiomForCell(placedIdioms: PlacedIdiom[], grid: (GridCell | null)[][], cell: SelectedCell) {
-  if (!cell) return null;
-
-  const [row, col] = cell;
-  const target = grid[row]?.[col];
-  if (!target) return null;
-
-  return (
-    placedIdioms.find(({ idiom, x, y, direction }) => {
-      for (let offset = 0; offset < idiom.word.length; offset += 1) {
-        const idiomRow = direction === 'V' ? y + offset : y;
-        const idiomCol = direction === 'H' ? x + offset : x;
-        if (idiomRow === row && idiomCol === col) {
-          return true;
-        }
-      }
-      return false;
-    }) ?? null
-  );
-}
-
-function createLevelState(level: number, previousScore = 0): GameState {
-  const generator = new GameGenerator(GRID_SIZE);
-  const idiomCount = Math.min(5 + Math.floor(level / 2), 10);
-  const { grid, idioms } = generator.generate(idiomCount);
-
-  const userGrid = grid.map((row) => row.map(() => ''));
-  const revealed = grid.map((row) =>
-    row.map((cell) => {
-      if (!cell) return false;
-      return Math.random() < Math.max(0.08, BASE_HINT_REVEAL_RATE - level * 0.01);
-    })
-  );
-
-  const hiddenChars = grid.flatMap((row, y) =>
-    row.flatMap((cell, x) => (cell && !revealed[y][x] ? [cell.char] : []))
-  );
-
-  const distractors = shuffle(
-    ALL_IDIOM_CHARS.filter((char) => !hiddenChars.includes(char))
-  ).slice(0, Math.min(EXTRA_CANDIDATES + Math.floor(level / 2), 12));
-
-  const candidates = shuffle([...hiddenChars, ...distractors]);
-  const totalCells = getTotalCells(grid);
-  const solvedCells = countSolvedCells(grid, userGrid, revealed);
-
+function withToast(state: SharedGameState, version: number, toast: ToastMessage | null): GameState {
   return {
-    grid,
-    userGrid,
-    revealed,
-    placedIdioms: idioms,
-    selectedCell: findNextEditableCell(grid, revealed, userGrid),
-    candidates,
-    isComplete: false,
-    level,
-    stats: {
-      score: previousScore,
-      streak: 0,
-      mistakes: 0,
-      hintsUsed: 0,
-      solvedCells,
-      totalCells,
-    },
-    toast: {
-      id: Date.now(),
-      text: `第 ${level} 關開始，找出所有成語。`,
-      tone: 'warning',
-    },
+    ...state,
+    toast,
     isReady: true,
-  };
-}
-
-function toPersistedState(state: GameState): PersistedGameState {
-  return {
-    grid: state.grid,
-    userGrid: state.userGrid,
-    revealed: state.revealed,
-    placedIdioms: state.placedIdioms,
-    selectedCell: state.selectedCell,
-    candidates: state.candidates,
-    isComplete: state.isComplete,
-    level: state.level,
-    stats: state.stats,
-  };
-}
-
-function isValidPersistedState(value: unknown): value is PersistedGameState {
-  if (!value || typeof value !== 'object') return false;
-
-  const candidate = value as Partial<PersistedGameState>;
-  return (
-    Array.isArray(candidate.grid) &&
-    Array.isArray(candidate.userGrid) &&
-    Array.isArray(candidate.revealed) &&
-    Array.isArray(candidate.placedIdioms) &&
-    Array.isArray(candidate.candidates) &&
-    typeof candidate.level === 'number' &&
-    typeof candidate.isComplete === 'boolean' &&
-    typeof candidate.stats === 'object' &&
-    candidate.stats !== null
-  );
-}
-
-function fromPersistedState(saved: PersistedGameState): GameState {
-  return {
-    ...saved,
-    toast: {
-      id: Date.now(),
-      text: `已恢復到第 ${saved.level} 關`,
-      tone: 'warning',
-    },
-    isReady: true,
+    syncVersion: version,
   };
 }
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<GameState>(EMPTY_STATE);
+  const syncVersionRef = useRef(0);
+  const syncingRef = useRef(false);
+  const pendingSyncRef = useRef<SharedGameState | null>(null);
 
-  const initLevel = useCallback((level: number, previousScore = 0) => {
-    setState(createLevelState(level, previousScore));
-  }, []);
+  const pushStateToServer = useCallback(async (nextState: SharedGameState, toast: ToastMessage | null) => {
+    pendingSyncRef.current = nextState;
+    if (syncingRef.current) return;
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      try {
-        const raw = window.localStorage.getItem(STORAGE_KEY);
-        if (!raw) {
-          setState(createLevelState(1));
-          return;
-        }
+    syncingRef.current = true;
 
-        const parsed = JSON.parse(raw) as unknown;
-        if (!isValidPersistedState(parsed)) {
-          setState(createLevelState(1));
-          return;
-        }
+    while (pendingSyncRef.current) {
+      const payload = pendingSyncRef.current;
+      pendingSyncRef.current = null;
 
-        setState(fromPersistedState(parsed));
-      } catch {
-        setState(createLevelState(1));
+      const response = await fetch('/api/game-state', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ state: payload }),
+      });
+
+      if (!response.ok) {
+        syncingRef.current = false;
+        throw new Error('Failed to sync shared game state');
       }
-    }, 0);
 
-    return () => window.clearTimeout(timer);
+      const snapshot = (await response.json()) as ServerSnapshot;
+      syncVersionRef.current = snapshot.version;
+      setState(withToast(snapshot.state, snapshot.version, toast));
+    }
+
+    syncingRef.current = false;
+  }, []);
+
+  const applyLocalUpdate = useCallback(
+    (updater: (prev: SharedGameState) => { next: SharedGameState; toast: ToastMessage | null } | null) => {
+      setState((prev) => {
+        const result = updater(prev);
+        if (!result) return prev;
+
+        const nextState = {
+          ...result.next,
+          isReady: true,
+          syncVersion: prev.syncVersion,
+          toast: result.toast,
+        };
+
+        void pushStateToServer(result.next, result.toast);
+        return nextState;
+      });
+    },
+    [pushStateToServer]
+  );
+
+  useEffect(() => {
+    let active = true;
+
+    const load = async () => {
+      try {
+        const snapshot = await fetchServerSnapshot();
+        if (!active) return;
+
+        syncVersionRef.current = snapshot.version;
+        setState(
+          withToast(snapshot.state, snapshot.version, {
+            id: Date.now(),
+            text: `已連線到共享棋盤`,
+            tone: 'warning',
+          })
+        );
+      } catch {
+        if (!active) return;
+        const fallback = createSharedLevelState(1);
+        setState(withToast(fallback, 0, { id: Date.now(), text: '離線模式', tone: 'warning' }));
+      }
+    };
+
+    void load();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
-    if (!state.isReady) return;
+    if (!state.isReady) return undefined;
 
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(toPersistedState(state)));
-  }, [state]);
+    const stream = new EventSource('/api/game-stream');
+
+    stream.addEventListener('update', async (event) => {
+      const { version } = JSON.parse((event as MessageEvent).data) as { version: number };
+      if (version <= syncVersionRef.current) return;
+
+      const snapshot = await fetchServerSnapshot().catch(() => null);
+      if (!snapshot) return;
+      if (snapshot.version <= syncVersionRef.current) return;
+
+      syncVersionRef.current = snapshot.version;
+      setState((prev) =>
+        withToast(
+          snapshot.state,
+          snapshot.version,
+          prev.toast ?? { id: Date.now(), text: '其他裝置已更新棋盤', tone: 'warning' }
+        )
+      );
+    });
+
+    return () => stream.close();
+  }, [state.isReady]);
 
   useEffect(() => {
     if (!state.toast) return undefined;
@@ -320,198 +188,205 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     [state.placedIdioms, state.grid, state.selectedCell]
   );
 
+  const highlightedCells = useMemo(
+    () => (currentIdiom ? getIdiomCells(currentIdiom) : []),
+    [currentIdiom]
+  );
+
   const progressPercent = useMemo(() => {
     if (!state.stats.totalCells) return 0;
     return Math.round((state.stats.solvedCells / state.stats.totalCells) * 100);
   }, [state.stats.solvedCells, state.stats.totalCells]);
 
-  const selectCell = useCallback((row: number, col: number) => {
-    setState((prev) => {
-      if (!prev.grid[row]?.[col] || prev.revealed[row][col]) return prev;
-      return { ...prev, selectedCell: [row, col] };
-    });
-  }, []);
+  const selectCell = useCallback(
+    (row: number, col: number) => {
+      applyLocalUpdate((prev) => {
+        if (!prev.grid[row]?.[col] || prev.revealed[row][col]) return null;
+        return { next: { ...prev, selectedCell: [row, col] }, toast: null };
+      });
+    },
+    [applyLocalUpdate]
+  );
 
-  const clearSelectedCell = useCallback(() => {
-    setState((prev) => {
-      if (!prev.selectedCell) return prev;
+  const clearCell = useCallback(
+    (row: number, col: number) => {
+      applyLocalUpdate((prev) => {
+        if (!prev.grid[row]?.[col] || prev.revealed[row][col]) return null;
+        if (!prev.userGrid[row][col]) {
+          return { next: { ...prev, selectedCell: [row, col] }, toast: null };
+        }
 
-      const [row, col] = prev.selectedCell;
-      if (prev.revealed[row][col]) return prev;
-
-      const userGrid = cloneGrid(prev.userGrid);
-      userGrid[row][col] = '';
-
-      return { ...prev, userGrid };
-    });
-  }, []);
-
-  const clearCell = useCallback((row: number, col: number) => {
-    setState((prev) => {
-      if (!prev.grid[row]?.[col] || prev.revealed[row][col]) return prev;
-      if (!prev.userGrid[row][col]) return { ...prev, selectedCell: [row, col] };
-
-      const userGrid = cloneGrid(prev.userGrid);
-      userGrid[row][col] = '';
-
-      return {
-        ...prev,
-        userGrid,
-        selectedCell: [row, col],
-        toast: {
-          id: Date.now(),
-          text: '已清空這一格',
-          tone: 'warning',
-        },
-      };
-    });
-  }, []);
-
-  const fillCell = useCallback((char: string) => {
-    setState((prev) => {
-      if (!prev.selectedCell || prev.isComplete) return prev;
-
-      const [row, col] = prev.selectedCell;
-      const targetCell = prev.grid[row][col];
-      if (!targetCell || prev.revealed[row][col]) return prev;
-
-      const userGrid = cloneGrid(prev.userGrid);
-      userGrid[row][col] = char;
-
-      const isCorrect = targetCell.char === char;
-      const nextRevealed = cloneGrid(prev.revealed);
-      const nextCandidates = [...prev.candidates];
-      let nextSelectedCell: SelectedCell = prev.selectedCell;
-      let nextScore = prev.stats.score;
-      let nextStreak = prev.stats.streak;
-      let nextMistakes = prev.stats.mistakes;
-      let toast: ToastMessage | null = null;
-
-      if (isCorrect) {
-        nextRevealed[row][col] = true;
+        const userGrid = cloneGrid(prev.userGrid);
         userGrid[row][col] = '';
 
-        const consumedIndex = nextCandidates.indexOf(char);
-        if (consumedIndex >= 0) nextCandidates.splice(consumedIndex, 1);
-
-        nextStreak += 1;
-        nextScore += 10 + Math.min(nextStreak, 5) * 2;
-        toast = {
-          id: Date.now(),
-          text: nextStreak >= 3 ? `連擊 ${nextStreak} 次` : '答對了',
-          tone: 'success',
+        return {
+          next: { ...prev, userGrid, selectedCell: [row, col] },
+          toast: { id: Date.now(), text: '已清空這一格', tone: 'warning' },
         };
-      } else {
-        nextStreak = 0;
-        nextMistakes += 1;
-        nextScore = Math.max(0, nextScore - 3);
-        toast = {
-          id: Date.now(),
-          text: '這個字不對，再想想',
-          tone: 'error',
+      });
+    },
+    [applyLocalUpdate]
+  );
+
+  const fillCell = useCallback(
+    (char: string) => {
+      applyLocalUpdate((prev) => {
+        if (!prev.selectedCell || prev.isComplete) return null;
+
+        const [row, col] = prev.selectedCell;
+        const targetCell = prev.grid[row][col];
+        if (!targetCell || prev.revealed[row][col]) return null;
+
+        const userGrid = cloneGrid(prev.userGrid);
+        userGrid[row][col] = char;
+
+        const isCorrect = targetCell.char === char;
+        const revealed = cloneGrid(prev.revealed);
+        const candidates = [...prev.candidates];
+        let selectedCell: SelectedCell = prev.selectedCell;
+        let score = prev.stats.score;
+        let streak = prev.stats.streak;
+        let mistakes = prev.stats.mistakes;
+        let toast: ToastMessage | null = null;
+
+        if (isCorrect) {
+          revealed[row][col] = true;
+          userGrid[row][col] = '';
+
+          const consumedIndex = candidates.indexOf(char);
+          if (consumedIndex >= 0) candidates.splice(consumedIndex, 1);
+
+          streak += 1;
+          score += 10 + Math.min(streak, 5) * 2;
+          toast = {
+            id: Date.now(),
+            text: streak >= 3 ? `連擊 ${streak} 次` : '答對了',
+            tone: 'success',
+          };
+        } else {
+          streak = 0;
+          mistakes += 1;
+          score = Math.max(0, score - 3);
+          toast = {
+            id: Date.now(),
+            text: '這個字不對，再想想',
+            tone: 'error',
+          };
+        }
+
+        const solvedCells = countSolvedCells(prev.grid, userGrid, revealed);
+        const isComplete = solvedCells === prev.stats.totalCells;
+
+        if (isComplete) {
+          selectedCell = null;
+          score += Math.max(20 - prev.stats.hintsUsed * 2, 6);
+          toast = { id: Date.now(), text: `第 ${prev.level} 關完成`, tone: 'success' };
+        } else {
+          selectedCell =
+            findNextEditableCellInIdiom(prev.placedIdioms, prev.grid, revealed, userGrid, prev.selectedCell) ??
+            findNextEditableCell(prev.grid, revealed, userGrid, prev.selectedCell);
+        }
+
+        return {
+          next: {
+            ...prev,
+            userGrid,
+            revealed,
+            candidates,
+            selectedCell,
+            isComplete,
+            stats: {
+              ...prev.stats,
+              score,
+              streak,
+              mistakes,
+              solvedCells,
+            },
+          },
+          toast,
         };
-      }
+      });
+    },
+    [applyLocalUpdate]
+  );
 
-      const solvedCells = countSolvedCells(prev.grid, userGrid, nextRevealed);
-      const isComplete = solvedCells === prev.stats.totalCells;
-      nextSelectedCell = isComplete
-        ? null
-        : findNextEditableCell(prev.grid, nextRevealed, userGrid, prev.selectedCell);
+  const useHint = useCallback(
+    () => {
+      applyLocalUpdate((prev) => {
+        if (prev.isComplete) return null;
 
-      return {
-        ...prev,
-        userGrid,
-        revealed: nextRevealed,
-        candidates: nextCandidates,
-        selectedCell: nextSelectedCell,
-        isComplete,
-        stats: {
-          ...prev.stats,
-          score: isComplete ? nextScore + Math.max(20 - prev.stats.hintsUsed * 2, 6) : nextScore,
-          streak: nextStreak,
-          mistakes: nextMistakes,
-          solvedCells,
-        },
-        toast: isComplete
-          ? {
-              id: Date.now(),
-              text: `第 ${prev.level} 關完成`,
-              tone: 'success',
-            }
-          : toast,
-      };
-    });
-  }, []);
+        const targetCell =
+          prev.selectedCell && !prev.revealed[prev.selectedCell[0]][prev.selectedCell[1]]
+            ? prev.selectedCell
+            : findNextEditableCell(prev.grid, prev.revealed, prev.userGrid);
 
-  const useHint = useCallback(() => {
-    setState((prev) => {
-      if (prev.isComplete) return prev;
+        if (!targetCell) return null;
 
-      const targetCell =
-        prev.selectedCell && !prev.revealed[prev.selectedCell[0]][prev.selectedCell[1]]
-          ? prev.selectedCell
-          : findNextEditableCell(prev.grid, prev.revealed, prev.userGrid);
+        const [row, col] = targetCell;
+        const cell = prev.grid[row][col];
+        if (!cell) return null;
 
-      if (!targetCell) return prev;
+        const revealed = cloneGrid(prev.revealed);
+        const userGrid = cloneGrid(prev.userGrid);
+        revealed[row][col] = true;
+        userGrid[row][col] = '';
 
-      const [row, col] = targetCell;
-      const cell = prev.grid[row][col];
-      if (!cell) return prev;
+        const candidates = [...prev.candidates];
+        const consumedIndex = candidates.indexOf(cell.char);
+        if (consumedIndex >= 0) candidates.splice(consumedIndex, 1);
 
-      const revealed = cloneGrid(prev.revealed);
-      const userGrid = cloneGrid(prev.userGrid);
-      revealed[row][col] = true;
-      userGrid[row][col] = '';
+        const solvedCells = countSolvedCells(prev.grid, userGrid, revealed);
+        const isComplete = solvedCells === prev.stats.totalCells;
+        const selectedCell = isComplete
+          ? null
+          : findNextEditableCellInIdiom(prev.placedIdioms, prev.grid, revealed, userGrid, targetCell) ??
+            findNextEditableCell(prev.grid, revealed, userGrid, targetCell);
 
-      const consumedIndex = prev.candidates.indexOf(cell.char);
-      const candidates = [...prev.candidates];
-      if (consumedIndex >= 0) candidates.splice(consumedIndex, 1);
-
-      const solvedCells = countSolvedCells(prev.grid, userGrid, revealed);
-      const isComplete = solvedCells === prev.stats.totalCells;
-      const selectedCell = isComplete ? null : findNextEditableCell(prev.grid, revealed, userGrid, targetCell);
-
-      return {
-        ...prev,
-        revealed,
-        userGrid,
-        candidates,
-        selectedCell,
-        isComplete,
-        stats: {
-          ...prev.stats,
-          score: Math.max(0, prev.stats.score - 5),
-          streak: 0,
-          hintsUsed: prev.stats.hintsUsed + 1,
-          solvedCells,
-        },
-        toast: {
-          id: Date.now(),
-          text: `提示：${cell.char}`,
-          tone: 'warning',
-        },
-      };
-    });
-  }, []);
+        return {
+          next: {
+            ...prev,
+            revealed,
+            userGrid,
+            candidates,
+            selectedCell,
+            isComplete,
+            stats: {
+              ...prev.stats,
+              score: Math.max(0, prev.stats.score - 5),
+              streak: 0,
+              hintsUsed: prev.stats.hintsUsed + 1,
+              solvedCells,
+            },
+          },
+          toast: { id: Date.now(), text: `提示：${cell.char}`, tone: 'warning' },
+        };
+      });
+    },
+    [applyLocalUpdate]
+  );
 
   const nextLevel = useCallback(() => {
-    initLevel(state.level + 1, state.stats.score);
-  }, [initLevel, state.level, state.stats.score]);
+    const nextState = createSharedLevelState(state.level + 1, state.stats.score);
+    setState(withToast(nextState, state.syncVersion, { id: Date.now(), text: `第 ${state.level + 1} 關開始`, tone: 'warning' }));
+    void pushStateToServer(nextState, { id: Date.now(), text: `第 ${state.level + 1} 關開始`, tone: 'warning' });
+  }, [pushStateToServer, state.level, state.stats.score, state.syncVersion]);
 
   const resetLevel = useCallback(() => {
-    initLevel(state.level, Math.max(0, state.stats.score - 10));
-  }, [initLevel, state.level, state.stats.score]);
+    const nextState = createSharedLevelState(state.level, Math.max(0, state.stats.score - 10));
+    setState(withToast(nextState, state.syncVersion, { id: Date.now(), text: `第 ${state.level} 關重新開始`, tone: 'warning' }));
+    void pushStateToServer(nextState, { id: Date.now(), text: `第 ${state.level} 關重新開始`, tone: 'warning' });
+  }, [pushStateToServer, state.level, state.stats.score, state.syncVersion]);
 
   return (
     <GameContext.Provider
       value={{
         ...state,
         currentIdiom,
+        highlightedCells,
         progressPercent,
         selectCell,
         clearCell,
         fillCell,
-        clearSelectedCell,
         useHint,
         nextLevel,
         resetLevel,
