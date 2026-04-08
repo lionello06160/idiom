@@ -131,14 +131,14 @@ export function GameRoot({ children }: { children: React.ReactNode }) {
   const [header, board, dock, overlay] = childArray;
 
   return (
-    <div className="relative mx-auto flex min-h-screen w-full max-w-[1680px] flex-col justify-center overflow-hidden px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-6">
+    <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-[1680px] flex-col justify-start overflow-hidden px-2 py-2 sm:px-4 sm:py-4 lg:justify-center lg:px-6 lg:py-6">
       <div className="animate-float absolute left-[-10%] top-[-10%] hidden h-64 w-64 rounded-full bg-secondary/10 blur-3xl lg:block" />
       <div
         className="absolute bottom-[-10%] right-[-10%] hidden h-64 w-64 rounded-full bg-accent/10 blur-3xl lg:block"
         style={{ animationDelay: '1.5s' }}
       />
 
-      <div className="relative z-10 grid min-h-[calc(100vh-1.5rem)] w-full grid-rows-[auto_minmax(0,1fr)_auto] gap-3 lg:min-h-[calc(100vh-3rem)] lg:grid-cols-[340px_minmax(980px,1fr)] lg:grid-rows-1 lg:gap-8">
+      <div className="relative z-10 grid min-h-[calc(100dvh-1rem)] w-full grid-rows-[auto_auto_auto] gap-2 lg:min-h-[calc(100vh-3rem)] lg:grid-cols-[340px_minmax(980px,1fr)] lg:grid-rows-1 lg:gap-8">
         <div className="contents lg:flex lg:min-h-0 lg:flex-col lg:justify-start lg:gap-5">
           <div className="order-1">{header}</div>
           <div className="order-3">{dock}</div>
@@ -178,30 +178,79 @@ export function GameHeader() {
   }
 
   return (
-    <div className="relative space-y-3 text-center sm:space-y-4 lg:space-y-5">
+    <div className="relative space-y-2 text-center sm:space-y-4 lg:space-y-5">
       <div className="flex items-start justify-between gap-3">
         <div className="text-left">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-foreground/50 sm:text-sm sm:tracking-[0.3em]">Idiom Grid</p>
-          <h1 className="title-gradient text-2xl font-black sm:text-3xl">Level {level}</h1>
+          <p className="hidden text-[11px] font-semibold uppercase tracking-[0.24em] text-foreground/50 sm:text-sm sm:tracking-[0.3em] lg:block">Idiom Grid</p>
+          <h1 className="title-gradient text-xl font-black sm:text-3xl">Level {level}</h1>
         </div>
 
         <div className="flex gap-2">
           <button
             type="button"
             onClick={useHint}
-            className="glass min-h-11 min-w-11 rounded-full p-2.5 transition-colors hover:bg-white/40"
+            className="glass min-h-10 min-w-10 rounded-full p-2 transition-colors hover:bg-white/40 sm:min-h-11 sm:min-w-11 sm:p-2.5"
             aria-label="使用提示"
           >
-            <Lightbulb size={20} />
+            <Lightbulb size={18} />
           </button>
           <button
             type="button"
             onClick={() => setShowResetConfirm((prev) => !prev)}
-            className="glass min-h-11 min-w-11 rounded-full p-2.5 transition-colors hover:bg-white/40"
+            className="glass min-h-10 min-w-10 rounded-full p-2 transition-colors hover:bg-white/40 sm:min-h-11 sm:min-w-11 sm:p-2.5"
             aria-label="重新開始本關"
           >
-            <RotateCcw size={20} />
+            <RotateCcw size={18} />
           </button>
+        </div>
+      </div>
+
+      <div className="glass rounded-[1.25rem] p-3 text-left sm:hidden">
+        <div className="grid grid-cols-4 gap-1.5 text-[11px]">
+          <div>
+            <p className="text-foreground/55">分數</p>
+            <p className="mt-0.5 text-lg font-black leading-none text-primary">{stats.score}</p>
+          </div>
+          <div>
+            <p className="text-foreground/55">連擊</p>
+            <p className="mt-0.5 text-lg font-black leading-none text-secondary">{stats.streak}</p>
+          </div>
+          <div>
+            <p className="text-foreground/55">錯誤</p>
+            <p className="mt-0.5 text-lg font-black leading-none text-accent">{stats.mistakes}</p>
+          </div>
+          <div>
+            <p className="text-foreground/55">提示</p>
+            <p className="mt-0.5 text-lg font-black leading-none text-foreground">{stats.hintsUsed}</p>
+          </div>
+        </div>
+
+        <div className="mt-3">
+          <div className="mb-1.5 flex items-center justify-between text-[11px] font-semibold text-foreground/70">
+            <span>進度 {progressPercent}%</span>
+            <span>
+              {stats.solvedCells}/{stats.totalCells}
+            </span>
+          </div>
+          <div className="h-2.5 rounded-full bg-white/50">
+            <motion.div
+              className="h-full rounded-full bg-gradient-to-r from-primary via-secondary to-accent"
+              initial={false}
+              animate={{ width: `${progressPercent}%` }}
+            />
+          </div>
+        </div>
+
+        <div className="mt-3 border-t border-white/40 pt-3">
+          <p className="flex items-center gap-1.5 text-[11px] font-semibold text-foreground/60">
+            {currentIdiom ? <Target size={13} /> : <Sparkles size={13} />}
+            {currentIdiom ? '選取中的成語' : '玩法提示'}
+          </p>
+          <p className="mt-1 text-sm leading-snug text-foreground/80">
+            {currentIdiom
+              ? currentIdiom.idiom.definition
+              : '點格子後從下方選字。答對會自動推進，答錯會扣分，卡關時可以使用提示。'}
+          </p>
         </div>
       </div>
 
@@ -240,33 +289,33 @@ export function GameHeader() {
         ) : null}
       </AnimatePresence>
 
-      <div className="grid grid-cols-4 gap-2 text-left text-xs sm:grid-cols-2 sm:gap-3 sm:text-sm">
-        <div className="glass rounded-2xl p-3">
+      <div className="hidden grid-cols-4 gap-1.5 text-left text-[11px] sm:grid sm:grid-cols-2 sm:gap-3 sm:text-sm">
+        <div className="glass rounded-[1.1rem] p-2 sm:rounded-2xl sm:p-3">
           <p className="text-foreground/55">分數</p>
-          <p className="mt-1 text-base font-black text-primary sm:text-xl">{stats.score}</p>
+          <p className="mt-0.5 text-xl font-black leading-none text-primary sm:mt-1 sm:text-xl">{stats.score}</p>
         </div>
-        <div className="glass rounded-2xl p-3">
+        <div className="glass rounded-[1.1rem] p-2 sm:rounded-2xl sm:p-3">
           <p className="text-foreground/55">連擊</p>
-          <p className="mt-1 text-base font-black text-secondary sm:text-xl">{stats.streak}</p>
+          <p className="mt-0.5 text-xl font-black leading-none text-secondary sm:mt-1 sm:text-xl">{stats.streak}</p>
         </div>
-        <div className="glass rounded-2xl p-3">
+        <div className="glass rounded-[1.1rem] p-2 sm:rounded-2xl sm:p-3">
           <p className="text-foreground/55">錯誤</p>
-          <p className="mt-1 text-base font-black text-accent sm:text-xl">{stats.mistakes}</p>
+          <p className="mt-0.5 text-xl font-black leading-none text-accent sm:mt-1 sm:text-xl">{stats.mistakes}</p>
         </div>
-        <div className="glass rounded-2xl p-3">
+        <div className="glass rounded-[1.1rem] p-2 sm:rounded-2xl sm:p-3">
           <p className="text-foreground/55">提示</p>
-          <p className="mt-1 text-base font-black text-foreground sm:text-xl">{stats.hintsUsed}</p>
+          <p className="mt-0.5 text-xl font-black leading-none text-foreground sm:mt-1 sm:text-xl">{stats.hintsUsed}</p>
         </div>
       </div>
 
-      <div className="glass rounded-[1.5rem] p-4 text-left sm:rounded-[1.75rem] sm:p-5">
-        <div className="mb-2 flex items-center justify-between text-xs font-semibold text-foreground/70 sm:mb-3 sm:text-sm">
+      <div className="hidden glass rounded-[1.25rem] p-3 text-left sm:block sm:rounded-[1.75rem] sm:p-5">
+        <div className="mb-1.5 flex items-center justify-between text-[11px] font-semibold text-foreground/70 sm:mb-3 sm:text-sm">
           <span>進度 {progressPercent}%</span>
           <span>
             {stats.solvedCells}/{stats.totalCells}
           </span>
         </div>
-        <div className="h-3 rounded-full bg-white/50">
+        <div className="h-2.5 rounded-full bg-white/50 sm:h-3">
           <motion.div
             className="h-full rounded-full bg-gradient-to-r from-primary via-secondary to-accent"
             initial={false}
@@ -275,7 +324,7 @@ export function GameHeader() {
         </div>
       </div>
 
-      <div className="glass min-h-[116px] rounded-[1.5rem] p-4 sm:min-h-[180px] sm:rounded-[1.75rem] sm:p-6">
+      <div className="hidden glass min-h-[82px] rounded-[1.25rem] p-3 sm:block sm:min-h-[180px] sm:rounded-[1.75rem] sm:p-6">
         <AnimatePresence mode="wait">
           {currentIdiom ? (
             <motion.div
@@ -285,11 +334,11 @@ export function GameHeader() {
               exit={{ opacity: 0, y: -10 }}
               className="space-y-2"
             >
-              <p className="flex items-center justify-center gap-2 text-xs font-semibold text-foreground/60 sm:text-sm">
+              <p className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-foreground/60 sm:gap-2 sm:text-sm">
                 <Target size={14} />
                 選取中的成語
               </p>
-              <p className="text-sm leading-relaxed text-foreground sm:text-base">{currentIdiom.idiom.definition}</p>
+              <p className="text-sm leading-snug text-foreground sm:text-base sm:leading-relaxed">{currentIdiom.idiom.definition}</p>
             </motion.div>
           ) : (
             <motion.div
@@ -299,11 +348,11 @@ export function GameHeader() {
               exit={{ opacity: 0, y: -10 }}
               className="space-y-2"
             >
-              <p className="flex items-center justify-center gap-2 text-xs font-semibold text-foreground/60 sm:text-sm">
+              <p className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-foreground/60 sm:gap-2 sm:text-sm">
                 <Sparkles size={14} />
                 玩法提示
               </p>
-              <p className="text-sm leading-relaxed text-foreground/70 sm:text-base">
+              <p className="text-sm leading-snug text-foreground/70 sm:text-base sm:leading-relaxed">
                 點格子後從下方選字。答對會自動推進，答錯會扣分，卡關時可以使用提示。
               </p>
             </motion.div>
@@ -332,19 +381,19 @@ export function GameBoard() {
   const { grid, userGrid, revealed, selectedCell, selectCell, clearCell, highlightedCells, isReady } = useGame();
 
   if (!isReady) {
-    return <div className="glass min-h-[360px] w-full max-w-[1080px] rounded-[1.75rem] sm:min-h-[940px] sm:rounded-[2.5rem]" />;
+    return <div className="glass min-h-[260px] w-full max-w-[1080px] rounded-[1.5rem] sm:min-h-[940px] sm:rounded-[2.5rem]" />;
   }
 
   return (
-    <div className="w-full max-w-[1080px] rounded-[1.8rem] border border-white/50 bg-grid-bg/55 p-3 shadow-xl backdrop-blur-sm sm:rounded-[2.5rem] sm:p-8">
-      <div className="grid grid-cols-8 gap-1.5 sm:gap-4">
+    <div className="w-full max-w-[1080px] rounded-[1.5rem] border border-white/50 bg-grid-bg/55 p-2 shadow-xl backdrop-blur-sm sm:rounded-[2.5rem] sm:p-8">
+      <div className="grid grid-cols-8 gap-1 sm:gap-4">
         {grid.map((row, y) =>
           row.map((cell, x) => {
             if (!cell) {
               return (
                 <div
                   key={`${y}-${x}`}
-                  className="h-[clamp(2.5rem,10vw,6rem)] w-[clamp(2.5rem,10vw,6rem)] sm:h-24 sm:w-24"
+                  className="h-[clamp(1.85rem,7.6vw,3rem)] w-[clamp(1.85rem,7.6vw,3rem)] sm:h-24 sm:w-24"
                 />
               );
             }
@@ -370,7 +419,7 @@ export function GameBoard() {
                   selectCell(y, x);
                 }}
                 className={cn(
-                  'cell-shadow relative flex h-[clamp(2.5rem,10vw,6rem)] w-[clamp(2.5rem,10vw,6rem)] items-center justify-center rounded-[0.95rem] text-[clamp(1.35rem,5.2vw,2.8rem)] font-bold transition-all duration-200 sm:h-24 sm:w-24 sm:rounded-[1.35rem] sm:text-[2.8rem]',
+                  'cell-shadow relative flex h-[clamp(1.85rem,7.6vw,3rem)] w-[clamp(1.85rem,7.6vw,3rem)] items-center justify-center rounded-[0.8rem] text-[clamp(1.05rem,4.7vw,1.65rem)] font-bold transition-all duration-200 sm:h-24 sm:w-24 sm:rounded-[1.35rem] sm:text-[2.8rem]',
                   isSelected && 'z-10 ring-2 ring-primary/90 ring-offset-2 ring-offset-[#f5eed1] shadow-[0_0_0_5px_rgba(38,139,210,0.18),0_10px_18px_rgba(38,139,210,0.18)] sm:ring-4 sm:ring-offset-4 sm:shadow-[0_0_0_6px_rgba(38,139,210,0.18),0_18px_30px_rgba(38,139,210,0.18)]',
                   isHighlightedPath && !isSelected && 'bg-sky-100 text-primary shadow-[0_6px_16px_rgba(38,139,210,0.12)] sm:shadow-[0_10px_24px_rgba(38,139,210,0.12)]',
                   isSolved && 'bg-primary text-white',
@@ -380,10 +429,10 @@ export function GameBoard() {
                 )}
               >
                 {isSelected && !isSolved ? (
-                  <span className="pointer-events-none absolute inset-0.5 rounded-[0.8rem] border-2 border-primary/35 bg-sky-100/85 sm:inset-1 sm:rounded-[1.05rem]" />
+                  <span className="pointer-events-none absolute inset-0.5 rounded-[0.62rem] border border-primary/35 bg-sky-100/85 sm:inset-1 sm:rounded-[1.05rem] sm:border-2" />
                 ) : null}
                 {isSelected && !isSolved ? (
-                  <span className="absolute -right-1 -top-1 h-3.5 w-3.5 rounded-full border-2 border-white bg-primary shadow-md sm:-right-1.5 sm:-top-1.5 sm:h-4.5 sm:w-4.5" />
+                  <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border border-white bg-primary shadow-md sm:-right-1.5 sm:-top-1.5 sm:h-4.5 sm:w-4.5 sm:border-2" />
                 ) : null}
                 {isSolved ? cell.char : guess}
               </motion.button>
@@ -401,14 +450,14 @@ export function GameDock() {
   if (!isReady) return null;
 
   return (
-    <div className="w-full space-y-3 overflow-hidden sm:space-y-4">
-      <div className="flex items-center justify-between text-xs font-semibold text-foreground/70 sm:text-sm">
+    <div className="w-full space-y-2 overflow-hidden sm:space-y-4">
+      <div className="flex items-center justify-between text-[11px] font-semibold text-foreground/70 sm:text-sm">
         <span>選字池</span>
-        <span className="text-[11px] text-foreground/55 sm:text-xs">點錯字可直接點格子清空</span>
+        <span className="text-[10px] text-foreground/55 sm:text-xs">點錯字可直接點格子清空</span>
       </div>
 
-      <div className="glass rounded-[1.5rem] p-3 sm:rounded-[1.75rem] sm:p-5">
-        <div className="grid grid-cols-5 gap-2 sm:grid-cols-4 sm:gap-3">
+      <div className="glass rounded-[1.25rem] p-2 sm:rounded-[1.75rem] sm:p-5">
+        <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-4 sm:gap-3">
           {candidates.map((char, index) => (
             <motion.button
               key={`${char}-${index}`}
@@ -418,7 +467,7 @@ export function GameDock() {
               onClick={() => fillCell(char)}
               disabled={!selectedCell}
               className={cn(
-                'min-h-11 w-full rounded-[1rem] border-b-4 border-primary/20 bg-white px-1 text-[1.7rem] font-bold text-primary shadow-md transition-all hover:shadow-lg sm:h-16 sm:rounded-2xl sm:text-3xl',
+                'min-h-10 w-full rounded-[0.85rem] border-b-3 border-primary/20 bg-white px-1 text-[1.5rem] font-bold text-primary shadow-md transition-all hover:shadow-lg sm:h-16 sm:rounded-2xl sm:border-b-4 sm:text-3xl',
                 !selectedCell && 'cursor-not-allowed grayscale opacity-50'
               )}
             >
