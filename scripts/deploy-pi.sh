@@ -32,6 +32,7 @@ ssh "${REMOTE_HOST}" "
   cd '${REMOTE_DIR}'
   npm ci
   npm run build
+  chmod +x '${REMOTE_DIR}/scripts/pi-watchdog.sh'
 "
 
 echo "==> Restarting PM2 app"
@@ -41,6 +42,16 @@ ssh "${REMOTE_HOST}" "
   cd '${REMOTE_DIR}'
   pm2 start npm --name '${APP_NAME}' -- run start -- --port '${APP_PORT}' --hostname '${APP_HOST}'
   pm2 save
+"
+
+echo "==> Installing watchdog cron"
+ssh "${REMOTE_HOST}" "
+  set -euo pipefail
+  tmp_cron=\$(mktemp)
+  crontab -l 2>/dev/null | grep -v '# ${APP_NAME}-watchdog' > \"\${tmp_cron}\" || true
+  echo \"* * * * * APP_NAME='${APP_NAME}' APP_PORT='${APP_PORT}' '${REMOTE_DIR}/scripts/pi-watchdog.sh' # ${APP_NAME}-watchdog\" >> \"\${tmp_cron}\"
+  crontab \"\${tmp_cron}\"
+  rm -f \"\${tmp_cron}\"
 "
 
 echo "==> Health check"

@@ -284,11 +284,7 @@ export function GameHeader() {
 
       <div className="glass rounded-[1.25rem] p-3 text-left sm:hidden">
         <div>
-          <p className="flex items-center gap-1.5 text-[11px] font-semibold text-foreground/60">
-            {currentIdiom ? <Target size={13} /> : <Sparkles size={13} />}
-            {currentIdiom ? '選取中的成語' : '玩法提示'}
-          </p>
-          <p className="mt-1 text-[1rem] leading-snug text-foreground/80">
+          <p className="text-[1rem] leading-snug text-foreground/80">
             {currentIdiom
               ? currentIdiom.idiom.definition
               : '點格子後從下方選字。答對會自動推進，答錯會扣分，卡關時可以使用提示。'}
