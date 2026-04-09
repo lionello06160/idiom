@@ -334,7 +334,7 @@ export function GameHeader() {
           </div>
           <div>
             <p className="text-foreground/55">提示</p>
-            <p className="mt-0.5 text-lg font-black leading-none text-foreground">{stats.hintsUsed}</p>
+            <p className="mt-0.5 text-[1.25rem] font-black leading-none text-foreground">{stats.hintsUsed}</p>
           </div>
         </div>
 
@@ -359,7 +359,7 @@ export function GameHeader() {
             {currentIdiom ? <Target size={13} /> : <Sparkles size={13} />}
             {currentIdiom ? '選取中的成語' : '玩法提示'}
           </p>
-          <p className="mt-1 text-sm leading-snug text-foreground/80">
+          <p className="mt-1 text-[1rem] leading-snug text-foreground/80">
             {currentIdiom
               ? currentIdiom.idiom.definition
               : '點格子後從下方選字。答對會自動推進，答錯會扣分，卡關時可以使用提示。'}
@@ -417,8 +417,8 @@ export function GameHeader() {
             <p className="text-right text-[2.2rem] font-black leading-none text-accent lg:text-[2.45rem]">{stats.mistakes}</p>
           </div>
           <div className="flex items-baseline justify-between gap-3">
-            <p className="text-[15px] font-medium text-foreground/60 lg:text-[15px]">提示</p>
-            <p className="text-right text-[2.2rem] font-black leading-none text-foreground lg:text-[2.45rem]">{stats.hintsUsed}</p>
+            <p className="text-[17px] font-medium text-foreground/60 lg:text-[17px]">提示</p>
+            <p className="text-right text-[2.325rem] font-black leading-none text-foreground lg:text-[2.575rem]">{stats.hintsUsed}</p>
           </div>
         </div>
 
@@ -453,7 +453,7 @@ export function GameHeader() {
                 <Target size={14} />
                 選取中的成語
               </p>
-              <p className="text-center text-sm leading-snug text-foreground sm:text-base sm:leading-relaxed lg:text-base lg:leading-relaxed">{currentIdiom.idiom.definition}</p>
+              <p className="text-center text-[1rem] leading-snug text-foreground sm:text-[1.125rem] sm:leading-relaxed lg:text-[1.125rem] lg:leading-relaxed">{currentIdiom.idiom.definition}</p>
             </motion.div>
           ) : (
             <motion.div
@@ -467,7 +467,7 @@ export function GameHeader() {
                 <Sparkles size={14} />
                 玩法提示
               </p>
-              <p className="text-center text-sm leading-snug text-foreground/70 sm:text-base sm:leading-relaxed lg:text-base lg:leading-relaxed">
+              <p className="text-center text-[1rem] leading-snug text-foreground/70 sm:text-[1.125rem] sm:leading-relaxed lg:text-[1.125rem] lg:leading-relaxed">
                 點格子後從下方選字。答對會自動推進，答錯會扣分，卡關時可以使用提示。
               </p>
             </motion.div>
