@@ -19,6 +19,13 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+const BOARD_FRAME_CLASS = cn(
+  'aspect-square max-h-full w-[min(100%,calc(100dvh-19rem))] max-w-[1080px]',
+  'sm:w-[min(100%,calc(100dvh-24rem))]',
+  'lg:w-[min(calc(100dvh-2.5rem),calc(100vw-24rem))]',
+  'xl:w-[min(calc(100dvh-3rem),calc(100vw-27rem))]'
+);
+
 function toneClassName(tone: 'success' | 'warning' | 'error') {
   switch (tone) {
     case 'success':
@@ -35,22 +42,22 @@ function syncStatusCopy(status: 'connecting' | 'synced' | 'syncing' | 'offline')
     case 'connecting':
       return {
         label: '連線中',
-        className: 'bg-slate-100 text-slate-700',
+        className: 'bg-slate-500',
       };
     case 'syncing':
       return {
         label: '同步中',
-        className: 'bg-amber-100 text-amber-700',
+        className: 'bg-amber-500',
       };
     case 'offline':
       return {
-        label: '連線中斷',
-        className: 'bg-rose-100 text-rose-700',
+        label: '離線',
+        className: 'bg-rose-500',
       };
     default:
       return {
-        label: '已即時同步',
-        className: 'bg-emerald-100 text-emerald-700',
+        label: '已同步',
+        className: 'bg-emerald-500',
       };
   }
 }
@@ -156,19 +163,19 @@ export function GameRoot({ children }: { children: React.ReactNode }) {
   const [header, board, dock, overlay] = childArray;
 
   return (
-    <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-[1680px] flex-col justify-start overflow-hidden px-2 py-2 sm:px-4 sm:py-4 lg:justify-center lg:px-6 lg:py-6">
+    <div className="relative mx-auto flex h-full w-full max-w-[1680px] flex-col overflow-hidden px-2 py-2 sm:px-4 sm:py-4 lg:px-6 lg:py-5">
       <div className="animate-float absolute left-[-10%] top-[-10%] hidden h-64 w-64 rounded-full bg-secondary/10 blur-3xl lg:block" />
       <div
         className="absolute bottom-[-10%] right-[-10%] hidden h-64 w-64 rounded-full bg-accent/10 blur-3xl lg:block"
         style={{ animationDelay: '1.5s' }}
       />
 
-      <div className="relative z-10 grid min-h-[calc(100dvh-1rem)] w-full grid-rows-[auto_auto_auto] gap-2 lg:min-h-[calc(100vh-3rem)] lg:grid-cols-[340px_minmax(980px,1fr)] lg:grid-rows-1 lg:gap-8">
-        <div className="contents lg:flex lg:min-h-0 lg:flex-col lg:justify-start lg:gap-5">
+      <div className="relative z-10 grid h-full min-h-0 w-full grid-rows-[auto_minmax(0,1fr)_auto] gap-2 lg:grid-cols-[320px_minmax(0,1fr)] lg:grid-rows-1 lg:gap-6 xl:grid-cols-[340px_minmax(0,1fr)] xl:gap-8">
+        <div className="contents lg:flex lg:min-h-0 lg:flex-col lg:gap-4 lg:overflow-hidden">
           <div className="order-1">{header}</div>
-          <div className="order-3">{dock}</div>
+          <div className="order-3 lg:flex-1 lg:min-h-0">{dock}</div>
         </div>
-        <div className="order-2 flex min-h-0 items-center justify-center lg:items-start lg:pt-2">
+        <div className="order-2 flex min-h-0 items-center justify-center">
           {board}
         </div>
         <GameSoundEffects />
@@ -209,10 +216,20 @@ export function GameHeader() {
       <div className="flex items-start justify-between gap-3">
         <div className="text-left">
           <p className="hidden text-[11px] font-semibold uppercase tracking-[0.24em] text-foreground/50 sm:text-sm sm:tracking-[0.3em] lg:block">Idiom Grid</p>
-          <h1 className="title-gradient text-xl font-black sm:text-3xl">Level {level}</h1>
+          <div className="mt-0.5 flex items-center gap-2 sm:mt-1 sm:gap-3">
+            <h1 className="title-gradient text-xl font-black sm:text-3xl">Level {level}</h1>
+            <span
+              aria-label={syncCopy.label}
+              title={syncCopy.label}
+              className={cn(
+                'inline-block h-2.5 w-2.5 rounded-full shadow-[0_0_0_3px_rgba(255,255,255,0.45)] sm:h-3 sm:w-3',
+                syncCopy.className
+              )}
+            />
+          </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex shrink-0 gap-2">
           <button
             type="button"
             onClick={useHint}
@@ -230,17 +247,6 @@ export function GameHeader() {
             <RotateCcw size={18} />
           </button>
         </div>
-      </div>
-
-      <div className="flex justify-start">
-        <span
-          className={cn(
-            'rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-[0.08em] sm:text-xs',
-            syncCopy.className
-          )}
-        >
-          {syncCopy.label}
-        </span>
       </div>
 
       <div className="glass rounded-[1.25rem] p-3 text-left sm:hidden">
@@ -327,42 +333,44 @@ export function GameHeader() {
         ) : null}
       </AnimatePresence>
 
-      <div className="hidden grid-cols-4 gap-1.5 text-left text-[11px] sm:grid sm:grid-cols-2 sm:gap-3 sm:text-sm">
-        <div className="glass rounded-[1.1rem] p-2 sm:rounded-2xl sm:p-3">
-          <p className="text-foreground/55">分數</p>
-          <p className="mt-0.5 text-xl font-black leading-none text-primary sm:mt-1 sm:text-xl">{stats.score}</p>
+      <div className="hidden glass text-left sm:block sm:rounded-[1.6rem] sm:p-4 lg:p-4">
+        <div className="grid grid-cols-4 gap-3 lg:gap-2.5">
+          <div>
+            <p className="text-[11px] text-foreground/55 lg:text-[10px]">分數</p>
+            <p className="mt-1 text-xl font-black leading-none text-primary lg:text-[1.35rem]">{stats.score}</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-foreground/55 lg:text-[10px]">連擊</p>
+            <p className="mt-1 text-xl font-black leading-none text-secondary lg:text-[1.35rem]">{stats.streak}</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-foreground/55 lg:text-[10px]">錯誤</p>
+            <p className="mt-1 text-xl font-black leading-none text-accent lg:text-[1.35rem]">{stats.mistakes}</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-foreground/55 lg:text-[10px]">提示</p>
+            <p className="mt-1 text-xl font-black leading-none text-foreground lg:text-[1.35rem]">{stats.hintsUsed}</p>
+          </div>
         </div>
-        <div className="glass rounded-[1.1rem] p-2 sm:rounded-2xl sm:p-3">
-          <p className="text-foreground/55">連擊</p>
-          <p className="mt-0.5 text-xl font-black leading-none text-secondary sm:mt-1 sm:text-xl">{stats.streak}</p>
-        </div>
-        <div className="glass rounded-[1.1rem] p-2 sm:rounded-2xl sm:p-3">
-          <p className="text-foreground/55">錯誤</p>
-          <p className="mt-0.5 text-xl font-black leading-none text-accent sm:mt-1 sm:text-xl">{stats.mistakes}</p>
-        </div>
-        <div className="glass rounded-[1.1rem] p-2 sm:rounded-2xl sm:p-3">
-          <p className="text-foreground/55">提示</p>
-          <p className="mt-0.5 text-xl font-black leading-none text-foreground sm:mt-1 sm:text-xl">{stats.hintsUsed}</p>
+
+        <div className="mt-4 border-t border-white/35 pt-3 lg:mt-3 lg:pt-2.5">
+          <div className="mb-2 flex items-center justify-between text-[11px] font-semibold text-foreground/70 lg:mb-1.5 lg:text-[12px]">
+            <span>進度 {progressPercent}%</span>
+            <span>
+              {stats.solvedCells}/{stats.totalCells}
+            </span>
+          </div>
+          <div className="h-2.5 rounded-full bg-white/50 lg:h-2">
+            <motion.div
+              className="h-full rounded-full bg-gradient-to-r from-primary via-secondary to-accent"
+              initial={false}
+              animate={{ width: `${progressPercent}%` }}
+            />
+          </div>
         </div>
       </div>
 
-      <div className="hidden glass rounded-[1.25rem] p-3 text-left sm:block sm:rounded-[1.75rem] sm:p-5">
-        <div className="mb-1.5 flex items-center justify-between text-[11px] font-semibold text-foreground/70 sm:mb-3 sm:text-sm">
-          <span>進度 {progressPercent}%</span>
-          <span>
-            {stats.solvedCells}/{stats.totalCells}
-          </span>
-        </div>
-        <div className="h-2.5 rounded-full bg-white/50 sm:h-3">
-          <motion.div
-            className="h-full rounded-full bg-gradient-to-r from-primary via-secondary to-accent"
-            initial={false}
-            animate={{ width: `${progressPercent}%` }}
-          />
-        </div>
-      </div>
-
-      <div className="hidden glass min-h-[82px] rounded-[1.25rem] p-3 sm:block sm:min-h-[180px] sm:rounded-[1.75rem] sm:p-6">
+      <div className="hidden glass min-h-[82px] rounded-[1.25rem] p-3 sm:block sm:min-h-[132px] sm:rounded-[1.6rem] sm:p-5 lg:min-h-[104px] lg:p-4">
         <AnimatePresence mode="wait">
           {currentIdiom ? (
             <motion.div
@@ -370,13 +378,13 @@ export function GameHeader() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="space-y-2"
+              className="space-y-1.5 lg:space-y-1"
             >
-              <p className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-foreground/60 sm:gap-2 sm:text-sm">
+              <p className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-foreground/60 sm:gap-2 sm:text-sm lg:text-[13px]">
                 <Target size={14} />
                 選取中的成語
               </p>
-              <p className="text-sm leading-snug text-foreground sm:text-base sm:leading-relaxed">{currentIdiom.idiom.definition}</p>
+              <p className="text-sm leading-snug text-foreground sm:text-base sm:leading-relaxed lg:text-[17px] lg:leading-snug">{currentIdiom.idiom.definition}</p>
             </motion.div>
           ) : (
             <motion.div
@@ -384,13 +392,13 @@ export function GameHeader() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="space-y-2"
+              className="space-y-1.5 lg:space-y-1"
             >
-              <p className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-foreground/60 sm:gap-2 sm:text-sm">
+              <p className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-foreground/60 sm:gap-2 sm:text-sm lg:text-[13px]">
                 <Sparkles size={14} />
                 玩法提示
               </p>
-              <p className="text-sm leading-snug text-foreground/70 sm:text-base sm:leading-relaxed">
+              <p className="text-sm leading-snug text-foreground/70 sm:text-base sm:leading-relaxed lg:text-[17px] lg:leading-snug">
                 點格子後從下方選字。答對會自動推進，答錯會扣分，卡關時可以使用提示。
               </p>
             </motion.div>
@@ -419,19 +427,24 @@ export function GameBoard() {
   const { grid, userGrid, revealed, selectedCell, selectCell, clearCell, highlightedCells, isReady } = useGame();
 
   if (!isReady) {
-    return <div className="glass min-h-[260px] w-full max-w-[1080px] rounded-[1.5rem] sm:min-h-[940px] sm:rounded-[2.5rem]" />;
+    return <div className={cn(BOARD_FRAME_CLASS, 'glass rounded-[1.5rem] sm:rounded-[2.5rem]')} />;
   }
 
   return (
-    <div className="w-full max-w-[1080px] rounded-[1.5rem] border border-white/50 bg-grid-bg/55 p-2 shadow-xl backdrop-blur-sm sm:rounded-[2.5rem] sm:p-8">
-      <div className="grid grid-cols-8 gap-1 sm:gap-4">
+    <div
+      className={cn(
+        BOARD_FRAME_CLASS,
+        'rounded-[1.5rem] border border-white/50 bg-grid-bg/55 p-[clamp(0.5rem,1.2vw,2rem)] shadow-xl backdrop-blur-sm sm:rounded-[2.5rem]'
+      )}
+    >
+      <div className="grid h-full w-full grid-cols-8 gap-[clamp(0.18rem,0.55vw,1rem)]">
         {grid.map((row, y) =>
           row.map((cell, x) => {
             if (!cell) {
               return (
                 <div
                   key={`${y}-${x}`}
-                  className="h-[clamp(1.85rem,7.6vw,3rem)] w-[clamp(1.85rem,7.6vw,3rem)] sm:h-24 sm:w-24"
+                  className="aspect-square w-full"
                 />
               );
             }
@@ -457,7 +470,7 @@ export function GameBoard() {
                   selectCell(y, x);
                 }}
                 className={cn(
-                  'cell-shadow relative flex h-[clamp(1.85rem,7.6vw,3rem)] w-[clamp(1.85rem,7.6vw,3rem)] items-center justify-center rounded-[0.8rem] text-[clamp(1.05rem,4.7vw,1.65rem)] font-bold transition-all duration-200 sm:h-24 sm:w-24 sm:rounded-[1.35rem] sm:text-[2.8rem]',
+                  'cell-shadow relative flex aspect-square w-full items-center justify-center rounded-[clamp(0.8rem,1.5vw,1.35rem)] text-[clamp(1rem,4.2vw,2.7rem)] font-bold transition-all duration-200',
                   isSelected && 'z-10 ring-2 ring-primary/90 ring-offset-2 ring-offset-[#f5eed1] shadow-[0_0_0_5px_rgba(38,139,210,0.18),0_10px_18px_rgba(38,139,210,0.18)] sm:ring-4 sm:ring-offset-4 sm:shadow-[0_0_0_6px_rgba(38,139,210,0.18),0_18px_30px_rgba(38,139,210,0.18)]',
                   isHighlightedPath && !isSelected && 'bg-sky-100 text-primary shadow-[0_6px_16px_rgba(38,139,210,0.12)] sm:shadow-[0_10px_24px_rgba(38,139,210,0.12)]',
                   isSolved && 'bg-primary text-white',
@@ -488,14 +501,14 @@ export function GameDock() {
   if (!isReady) return null;
 
   return (
-    <div className="w-full space-y-2 overflow-hidden sm:space-y-4">
+    <div className="w-full space-y-2 overflow-hidden sm:space-y-4 lg:flex lg:h-full lg:min-h-0 lg:flex-col">
       <div className="flex items-center justify-between text-[11px] font-semibold text-foreground/70 sm:text-sm">
         <span>選字池</span>
         <span className="text-[10px] text-foreground/55 sm:text-xs">點錯字可直接點格子清空</span>
       </div>
 
-      <div className="glass rounded-[1.25rem] p-2 sm:rounded-[1.75rem] sm:p-5">
-        <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-4 sm:gap-3">
+      <div className="glass rounded-[1.25rem] p-2 sm:rounded-[1.75rem] sm:p-5 lg:flex-1 lg:min-h-0 lg:p-4">
+        <div className="grid grid-cols-6 content-start gap-1.5 sm:grid-cols-4 sm:gap-3">
           {candidates.map((char, index) => (
             <motion.button
               key={`${char}-${index}`}

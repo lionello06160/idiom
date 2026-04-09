@@ -22,6 +22,8 @@ rsync -az --delete \
   --exclude .next \
   --exclude .git \
   --exclude .DS_Store \
+  --exclude data \
+  --exclude .codex-screenshots \
   "${ROOT_DIR}/" "${REMOTE_HOST}:${REMOTE_DIR}/"
 
 echo "==> Installing dependencies and building"

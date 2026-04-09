@@ -8,7 +8,7 @@ import {
 
 export default function Home() {
   return (
-    <main>
+    <main className="h-[100dvh] overflow-hidden">
       <GameRoot>
         <GameHeader />
         <GameBoard />
