@@ -6,7 +6,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   Lightbulb,
   RotateCcw,
-  Smartphone,
   Sparkles,
   Target,
   Trophy,
@@ -190,65 +189,12 @@ function GameSoundEffects() {
   return null;
 }
 
-function MobileLandscapePrompt() {
-  const [isPortraitMobile, setIsPortraitMobile] = React.useState(false);
-
-  React.useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const updateOrientationState = () => {
-      const isMobileViewport = window.innerWidth < 1024;
-      const isPortrait = window.innerHeight > window.innerWidth;
-      setIsPortraitMobile(isMobileViewport && isPortrait);
-    };
-
-    updateOrientationState();
-
-    const orientationApi = (window.screen as Screen & {
-      orientation?: {
-        lock?: (orientation: 'landscape' | 'portrait') => Promise<void>;
-      };
-    }).orientation;
-
-    if (window.innerWidth < 1024 && orientationApi?.lock) {
-      void orientationApi.lock('landscape').catch(() => {
-        // Mobile browsers often require fullscreen/PWA context for orientation lock.
-      });
-    }
-
-    window.addEventListener('resize', updateOrientationState);
-    window.addEventListener('orientationchange', updateOrientationState);
-
-    return () => {
-      window.removeEventListener('resize', updateOrientationState);
-      window.removeEventListener('orientationchange', updateOrientationState);
-    };
-  }, []);
-
-  if (!isPortraitMobile) return null;
-
-  return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#f5eed8] px-6 text-center lg:hidden">
-      <div className="max-w-sm rounded-[2rem] border border-white/60 bg-white/70 px-6 py-8 shadow-[0_18px_40px_rgba(114,98,57,0.12)] backdrop-blur-md">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
-          <Smartphone size={30} />
-        </div>
-        <p className="mt-5 text-xl font-black text-foreground">請將手機橫向使用</p>
-        <p className="mt-3 text-sm leading-relaxed text-foreground/70">
-          這個遊戲在手機上已改成橫向版面。旋轉裝置後，棋盤與選字池會完整顯示。
-        </p>
-      </div>
-    </div>
-  );
-}
-
 export function GameRoot({ children }: { children: React.ReactNode }) {
   const childArray = React.Children.toArray(children);
   const [header, board, dock, overlay] = childArray;
 
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden px-2 py-2 sm:px-4 sm:py-4 lg:px-5 lg:py-5 xl:px-6">
-      <MobileLandscapePrompt />
       <div className="animate-float absolute left-[-10%] top-[-10%] hidden h-64 w-64 rounded-full bg-secondary/10 blur-3xl lg:block" />
       <div
         className="absolute bottom-[-10%] right-[-10%] hidden h-64 w-64 rounded-full bg-accent/10 blur-3xl lg:block"
@@ -337,42 +283,7 @@ export function GameHeader() {
       </div>
 
       <div className="glass rounded-[1.25rem] p-3 text-left sm:hidden">
-        <div className="grid grid-cols-4 gap-1.5 text-[11px]">
-          <div>
-            <p className="text-foreground/55">分數</p>
-            <p className="mt-0.5 text-lg font-black leading-none text-primary">{stats.score}</p>
-          </div>
-          <div>
-            <p className="text-foreground/55">連擊</p>
-            <p className="mt-0.5 text-lg font-black leading-none text-secondary">{stats.streak}</p>
-          </div>
-          <div>
-            <p className="text-foreground/55">錯誤</p>
-            <p className="mt-0.5 text-lg font-black leading-none text-accent">{stats.mistakes}</p>
-          </div>
-          <div>
-            <p className="text-foreground/55">提示</p>
-            <p className="mt-0.5 text-[1.25rem] font-black leading-none text-foreground">{stats.hintsUsed}</p>
-          </div>
-        </div>
-
-        <div className="mt-3">
-          <div className="mb-1.5 flex items-center justify-between text-[11px] font-semibold text-foreground/70">
-            <span>進度 {progressPercent}%</span>
-            <span>
-              {stats.solvedCells}/{stats.totalCells}
-            </span>
-          </div>
-          <div className="h-2.5 rounded-full bg-white/50">
-            <motion.div
-              className="h-full rounded-full bg-gradient-to-r from-primary via-secondary to-accent"
-              initial={false}
-              animate={{ width: `${progressPercent}%` }}
-            />
-          </div>
-        </div>
-
-        <div className="mt-3 border-t border-white/40 pt-3">
+        <div>
           <p className="flex items-center gap-1.5 text-[11px] font-semibold text-foreground/60">
             {currentIdiom ? <Target size={13} /> : <Sparkles size={13} />}
             {currentIdiom ? '選取中的成語' : '玩法提示'}
