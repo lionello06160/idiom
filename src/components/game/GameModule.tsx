@@ -98,7 +98,7 @@ function GameSoundEffects() {
   const lastToastIdRef = React.useRef<number | null>(null);
   const completedRef = React.useRef(false);
 
-  const getAudioContext = React.useCallback(() => {
+  const ensureAudioContext = React.useCallback(async () => {
     if (typeof window === 'undefined') return null;
 
     const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -109,65 +109,83 @@ function GameSoundEffects() {
     }
 
     if (audioContextRef.current.state === 'suspended') {
-      void audioContextRef.current.resume();
+      await audioContextRef.current.resume().catch(() => null);
     }
 
     return audioContextRef.current;
   }, []);
 
   React.useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const unlockAudio = () => {
+      void ensureAudioContext();
+    };
+
+    window.addEventListener('pointerdown', unlockAudio, { passive: true });
+    window.addEventListener('keydown', unlockAudio);
+
+    return () => {
+      window.removeEventListener('pointerdown', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+    };
+  }, [ensureAudioContext]);
+
+  React.useEffect(() => {
     if (!toast || toast.id === lastToastIdRef.current) return;
     lastToastIdRef.current = toast.id;
 
-    const context = getAudioContext();
-    if (!context) return;
+    void ensureAudioContext().then((context) => {
+      if (!context) return;
 
-    if (toast.tone === 'error') {
-      playToneSequence(
-        context,
-        [
-          { frequency: 280, duration: 0.12, gain: 0.045 },
-          { frequency: 220, duration: 0.16, gain: 0.04 },
-        ],
-        'triangle'
-      );
-      return;
-    }
+      if (toast.tone === 'error') {
+        playToneSequence(
+          context,
+          [
+            { frequency: 280, duration: 0.12, gain: 0.045 },
+            { frequency: 220, duration: 0.16, gain: 0.04 },
+          ],
+          'triangle'
+        );
+        return;
+      }
 
-    if (toast.tone === 'success' && !isComplete) {
-      playToneSequence(
-        context,
-        [
-          { frequency: 523.25, duration: 0.09, gain: 0.028 },
-          { frequency: 659.25, duration: 0.12, gain: 0.032 },
-        ],
-        'sine'
-      );
-    }
-  }, [getAudioContext, isComplete, toast]);
+      if (toast.tone === 'success' && !isComplete) {
+        playToneSequence(
+          context,
+          [
+            { frequency: 523.25, duration: 0.09, gain: 0.028 },
+            { frequency: 659.25, duration: 0.12, gain: 0.032 },
+          ],
+          'sine'
+        );
+      }
+    });
+  }, [ensureAudioContext, isComplete, toast]);
 
   React.useEffect(() => {
     if (isComplete && !completedRef.current) {
       completedRef.current = true;
-      const context = getAudioContext();
-      if (!context) return;
+      void ensureAudioContext().then((context) => {
+        if (!context) return;
 
-      playToneSequence(
-        context,
-        [
-          { frequency: 523.25, duration: 0.16, gain: 0.03 },
-          { frequency: 659.25, duration: 0.16, gain: 0.035 },
-          { frequency: 783.99, duration: 0.2, gain: 0.04 },
-          { frequency: 1046.5, duration: 0.34, gain: 0.05 },
-        ],
-        'sine'
-      );
+        playToneSequence(
+          context,
+          [
+            { frequency: 523.25, duration: 0.16, gain: 0.03 },
+            { frequency: 659.25, duration: 0.16, gain: 0.035 },
+            { frequency: 783.99, duration: 0.2, gain: 0.04 },
+            { frequency: 1046.5, duration: 0.34, gain: 0.05 },
+          ],
+          'sine'
+        );
+      });
     }
 
     if (!isComplete) {
       completedRef.current = false;
     }
-  }, [getAudioContext, isComplete]);
+  }, [ensureAudioContext, isComplete]);
 
   return null;
 }

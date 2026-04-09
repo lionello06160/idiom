@@ -15,6 +15,7 @@ const BASE_HINT_REVEAL_RATE = 0.18;
 const EXTRA_CANDIDATES = 6;
 const MIN_VISIBLE_CELLS = 3;
 const MIN_INTERSECTION_HINTS = 2;
+const EXTRA_INITIAL_REVEALS = 2;
 const ALL_IDIOM_CHARS = Array.from(new Set(IDIOMS.flatMap((idiom) => Array.from(idiom.word))));
 
 function getIdiomCells(placed: { direction: 'H' | 'V'; x: number; y: number; idiom: { word: string } }) {
@@ -76,6 +77,16 @@ export function createSharedLevelState(level: number, previousScore = 0): Shared
       revealed[row][col] = true;
     }
   }
+
+  const additionalRevealCells = shuffle(
+    grid.flatMap((row, y) =>
+      row.flatMap((cell, x) => (cell && !revealed[y][x] ? [[y, x] as [number, number]] : []))
+    )
+  );
+
+  additionalRevealCells.slice(0, EXTRA_INITIAL_REVEALS).forEach(([row, col]) => {
+    revealed[row][col] = true;
+  });
 
   const hiddenChars = grid.flatMap((row, y) =>
     row.flatMap((cell, x) => (cell && !revealed[y][x] ? [cell.char] : []))
