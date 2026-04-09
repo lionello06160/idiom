@@ -335,34 +335,34 @@ export function GameHeader() {
         ) : null}
       </AnimatePresence>
 
-      <div className="hidden glass text-left sm:block sm:rounded-[1.6rem] sm:p-4 lg:p-4">
-        <div className="grid grid-cols-4 gap-3 lg:gap-2.5">
-          <div>
-            <p className="text-[11px] text-foreground/55 lg:text-[10px]">分數</p>
-            <p className="mt-1 text-xl font-black leading-none text-primary lg:text-[1.35rem]">{stats.score}</p>
+      <div className="hidden glass text-left sm:block sm:rounded-[1.75rem] sm:p-5 lg:p-5">
+        <div className="space-y-3 lg:space-y-2.5">
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="text-[15px] font-medium text-foreground/60 lg:text-[15px]">分數</p>
+            <p className="text-right text-[2.2rem] font-black leading-none text-primary lg:text-[2.45rem]">{stats.score}</p>
           </div>
-          <div>
-            <p className="text-[11px] text-foreground/55 lg:text-[10px]">連擊</p>
-            <p className="mt-1 text-xl font-black leading-none text-secondary lg:text-[1.35rem]">{stats.streak}</p>
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="text-[15px] font-medium text-foreground/60 lg:text-[15px]">連擊</p>
+            <p className="text-right text-[2.2rem] font-black leading-none text-secondary lg:text-[2.45rem]">{stats.streak}</p>
           </div>
-          <div>
-            <p className="text-[11px] text-foreground/55 lg:text-[10px]">錯誤</p>
-            <p className="mt-1 text-xl font-black leading-none text-accent lg:text-[1.35rem]">{stats.mistakes}</p>
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="text-[15px] font-medium text-foreground/60 lg:text-[15px]">錯誤</p>
+            <p className="text-right text-[2.2rem] font-black leading-none text-accent lg:text-[2.45rem]">{stats.mistakes}</p>
           </div>
-          <div>
-            <p className="text-[11px] text-foreground/55 lg:text-[10px]">提示</p>
-            <p className="mt-1 text-xl font-black leading-none text-foreground lg:text-[1.35rem]">{stats.hintsUsed}</p>
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="text-[15px] font-medium text-foreground/60 lg:text-[15px]">提示</p>
+            <p className="text-right text-[2.2rem] font-black leading-none text-foreground lg:text-[2.45rem]">{stats.hintsUsed}</p>
           </div>
         </div>
 
-        <div className="mt-4 border-t border-white/35 pt-3 lg:mt-3 lg:pt-2.5">
-          <div className="mb-2 flex items-center justify-between text-[11px] font-semibold text-foreground/70 lg:mb-1.5 lg:text-[12px]">
+        <div className="mt-5 border-t border-white/35 pt-4 lg:mt-4 lg:pt-3.5">
+          <div className="mb-2.5 flex items-center justify-between text-[14px] font-semibold text-foreground/75 lg:mb-2 lg:text-[15px]">
             <span>進度 {progressPercent}%</span>
             <span>
               {stats.solvedCells}/{stats.totalCells}
             </span>
           </div>
-          <div className="h-2.5 rounded-full bg-white/50 lg:h-2">
+          <div className="h-2.5 rounded-full bg-white/50 lg:h-2.5">
             <motion.div
               className="h-full rounded-full bg-gradient-to-r from-primary via-secondary to-accent"
               initial={false}
@@ -372,7 +372,7 @@ export function GameHeader() {
         </div>
       </div>
 
-      <div className="hidden glass min-h-[82px] rounded-[1.25rem] p-3 sm:block sm:min-h-[132px] sm:rounded-[1.6rem] sm:p-5 lg:min-h-[104px] lg:p-4">
+      <div className="hidden glass min-h-[82px] rounded-[1.25rem] p-3 sm:block sm:min-h-[170px] sm:rounded-[1.75rem] sm:p-6 lg:min-h-[180px] lg:p-6">
         <AnimatePresence mode="wait">
           {currentIdiom ? (
             <motion.div
@@ -380,13 +380,13 @@ export function GameHeader() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="space-y-1.5 lg:space-y-1"
+              className="flex min-h-full flex-col items-center justify-center space-y-2"
             >
-              <p className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-foreground/60 sm:gap-2 sm:text-sm lg:text-[13px]">
+              <p className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-foreground/60 sm:gap-2 sm:text-sm lg:text-sm">
                 <Target size={14} />
                 選取中的成語
               </p>
-              <p className="text-sm leading-snug text-foreground sm:text-base sm:leading-relaxed lg:text-[17px] lg:leading-snug">{currentIdiom.idiom.definition}</p>
+              <p className="text-center text-sm leading-snug text-foreground sm:text-base sm:leading-relaxed lg:text-base lg:leading-relaxed">{currentIdiom.idiom.definition}</p>
             </motion.div>
           ) : (
             <motion.div
@@ -394,13 +394,13 @@ export function GameHeader() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="space-y-1.5 lg:space-y-1"
+              className="flex min-h-full flex-col items-center justify-center space-y-2"
             >
-              <p className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-foreground/60 sm:gap-2 sm:text-sm lg:text-[13px]">
+              <p className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-foreground/60 sm:gap-2 sm:text-sm lg:text-sm">
                 <Sparkles size={14} />
                 玩法提示
               </p>
-              <p className="text-sm leading-snug text-foreground/70 sm:text-base sm:leading-relaxed lg:text-[17px] lg:leading-snug">
+              <p className="text-center text-sm leading-snug text-foreground/70 sm:text-base sm:leading-relaxed lg:text-base lg:leading-relaxed">
                 點格子後從下方選字。答對會自動推進，答錯會扣分，卡關時可以使用提示。
               </p>
             </motion.div>
