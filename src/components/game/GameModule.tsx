@@ -246,7 +246,7 @@ export function GameHeader() {
 
   return (
     <div className="relative space-y-2 text-center sm:space-y-4 lg:space-y-5">
-      <div className="flex items-start justify-between gap-3">
+      <div className="hidden items-start justify-between gap-3 sm:flex">
         <div className="text-left">
           <p className="hidden text-[11px] font-semibold uppercase tracking-[0.24em] text-foreground/50 sm:text-sm sm:tracking-[0.3em] lg:block">Idiom Grid</p>
           <div className="mt-0.5 flex items-center gap-2 sm:mt-1 sm:gap-3">
