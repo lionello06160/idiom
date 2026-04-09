@@ -20,10 +20,10 @@ function cn(...inputs: ClassValue[]) {
 }
 
 const BOARD_FRAME_CLASS = cn(
-  'aspect-square max-h-full w-[min(100%,calc(100dvh-19rem))] max-w-[1080px]',
+  'aspect-square max-h-full w-[min(100%,calc(100dvh-19rem))]',
   'sm:w-[min(100%,calc(100dvh-24rem))]',
-  'lg:w-[min(calc(100dvh-2.5rem),calc(100vw-24rem))]',
-  'xl:w-[min(calc(100dvh-3rem),calc(100vw-27rem))]'
+  'lg:w-[min(100%,calc(100dvh-2rem))]',
+  'xl:w-[min(100%,calc(100dvh-2.5rem))]'
 );
 
 function toneClassName(tone: 'success' | 'warning' | 'error') {
@@ -163,20 +163,22 @@ export function GameRoot({ children }: { children: React.ReactNode }) {
   const [header, board, dock, overlay] = childArray;
 
   return (
-    <div className="relative mx-auto flex h-full w-full max-w-[1680px] flex-col overflow-hidden px-2 py-2 sm:px-4 sm:py-4 lg:px-6 lg:py-5">
+    <div className="relative flex h-full w-full flex-col overflow-hidden px-2 py-2 sm:px-4 sm:py-4 lg:px-5 lg:py-5 xl:px-6">
       <div className="animate-float absolute left-[-10%] top-[-10%] hidden h-64 w-64 rounded-full bg-secondary/10 blur-3xl lg:block" />
       <div
         className="absolute bottom-[-10%] right-[-10%] hidden h-64 w-64 rounded-full bg-accent/10 blur-3xl lg:block"
         style={{ animationDelay: '1.5s' }}
       />
 
-      <div className="relative z-10 grid h-full min-h-0 w-full grid-rows-[auto_minmax(0,1fr)_auto] gap-2 lg:grid-cols-[320px_minmax(0,1fr)] lg:grid-rows-1 lg:gap-6 xl:grid-cols-[340px_minmax(0,1fr)] xl:gap-8">
-        <div className="contents lg:flex lg:min-h-0 lg:flex-col lg:gap-4 lg:overflow-hidden">
-          <div className="order-1">{header}</div>
-          <div className="order-3 lg:flex-1 lg:min-h-0">{dock}</div>
+      <div className="relative z-10 grid h-full min-h-0 w-full grid-rows-[auto_minmax(0,1fr)_auto] gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,calc(100dvh-2rem))_minmax(0,1fr)] lg:grid-rows-1 lg:gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,calc(100dvh-2.5rem))_minmax(0,1fr)] xl:gap-6">
+        <div className="order-1 lg:min-h-0 lg:w-[240px] lg:justify-self-end xl:w-[260px]">
+          {header}
         </div>
-        <div className="order-2 flex min-h-0 items-center justify-center">
+        <div className="order-2 flex min-h-0 items-center justify-center lg:justify-center">
           {board}
+        </div>
+        <div className="order-3 lg:flex lg:min-h-0 lg:w-[240px] lg:flex-col lg:justify-self-start lg:overflow-hidden xl:w-[260px]">
+          <div className="lg:flex-1 lg:min-h-0">{dock}</div>
         </div>
         <GameSoundEffects />
         {overlay}
@@ -437,14 +439,14 @@ export function GameBoard() {
         'rounded-[1.5rem] border border-white/50 bg-grid-bg/55 p-[clamp(0.5rem,1.2vw,2rem)] shadow-xl backdrop-blur-sm sm:rounded-[2.5rem]'
       )}
     >
-      <div className="grid h-full w-full grid-cols-8 gap-[clamp(0.18rem,0.55vw,1rem)]">
+      <div className="grid h-full w-full grid-cols-8 grid-rows-8 gap-[clamp(0.18rem,0.55vw,1rem)]">
         {grid.map((row, y) =>
           row.map((cell, x) => {
             if (!cell) {
               return (
                 <div
                   key={`${y}-${x}`}
-                  className="aspect-square w-full"
+                  className="h-full w-full"
                 />
               );
             }
@@ -470,7 +472,7 @@ export function GameBoard() {
                   selectCell(y, x);
                 }}
                 className={cn(
-                  'cell-shadow relative flex aspect-square w-full items-center justify-center rounded-[clamp(0.8rem,1.5vw,1.35rem)] text-[clamp(1rem,4.2vw,2.7rem)] font-bold transition-all duration-200',
+                  'cell-shadow relative flex h-full w-full items-center justify-center rounded-[clamp(0.8rem,1.5vw,1.35rem)] text-[clamp(1rem,4.2vw,2.7rem)] font-bold transition-all duration-200',
                   isSelected && 'z-10 ring-2 ring-primary/90 ring-offset-2 ring-offset-[#f5eed1] shadow-[0_0_0_5px_rgba(38,139,210,0.18),0_10px_18px_rgba(38,139,210,0.18)] sm:ring-4 sm:ring-offset-4 sm:shadow-[0_0_0_6px_rgba(38,139,210,0.18),0_18px_30px_rgba(38,139,210,0.18)]',
                   isHighlightedPath && !isSelected && 'bg-sky-100 text-primary shadow-[0_6px_16px_rgba(38,139,210,0.12)] sm:shadow-[0_10px_24px_rgba(38,139,210,0.12)]',
                   isSolved && 'bg-primary text-white',
@@ -507,7 +509,7 @@ export function GameDock() {
         <span className="text-[10px] text-foreground/55 sm:text-xs">點錯字可直接點格子清空</span>
       </div>
 
-      <div className="glass rounded-[1.25rem] p-2 sm:rounded-[1.75rem] sm:p-5 lg:flex-1 lg:min-h-0 lg:p-4">
+      <div className="glass rounded-[1.25rem] p-2 sm:rounded-[1.75rem] sm:p-5 lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:p-4">
         <div className="grid grid-cols-6 content-start gap-1.5 sm:grid-cols-4 sm:gap-3">
           {candidates.map((char, index) => (
             <motion.button
