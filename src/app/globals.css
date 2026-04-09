@@ -65,3 +65,96 @@ body > * {
 .animate-float {
   animation: float 3s ease-in-out infinite;
 }
+
+.game-shell {
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+  gap: 0.5rem;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.game-header-slot,
+.game-board-slot,
+.game-dock-slot {
+  min-height: 0;
+}
+
+.game-board-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-dock-inner {
+  min-height: 0;
+}
+
+@media (max-width: 1023px) and (orientation: landscape) {
+  .game-shell {
+    grid-template-columns: minmax(0, 1fr) 15rem;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 0.75rem;
+  }
+
+  .game-header-slot {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .game-board-slot {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    justify-content: center;
+  }
+
+  .game-dock-slot {
+    grid-column: 2;
+    grid-row: 2;
+    display: flex;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .game-dock-inner {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  .game-shell {
+    grid-template-columns: minmax(0, 1fr) minmax(0, calc(100dvh - 2rem)) minmax(0, 1fr);
+    grid-template-rows: 1fr;
+    gap: 1.25rem;
+  }
+
+  .game-header-slot {
+    width: 240px;
+    justify-self: end;
+  }
+
+  .game-dock-slot {
+    display: flex;
+    width: 240px;
+    justify-self: start;
+    overflow: hidden;
+  }
+
+  .game-dock-inner {
+    flex: 1 1 auto;
+  }
+}
+
+@media (min-width: 1280px) {
+  .game-shell {
+    grid-template-columns: minmax(0, 1fr) minmax(0, calc(100dvh - 2.5rem)) minmax(0, 1fr);
+    gap: 1.5rem;
+  }
+
+  .game-header-slot,
+  .game-dock-slot {
+    width: 260px;
+  }
+}

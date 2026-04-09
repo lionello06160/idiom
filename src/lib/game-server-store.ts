@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { createSharedLevelState, isValidSharedState, type SharedGameState } from '@/lib/game-shared';
+import { createSharedLevelState } from '@/lib/game-level-factory';
+import { isValidSharedState, type SharedGameState } from '@/lib/game-shared';
 
 interface ServerSnapshot {
   state: SharedGameState;

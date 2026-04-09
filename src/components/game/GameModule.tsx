@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   Lightbulb,
   RotateCcw,
+  Smartphone,
   Sparkles,
   Target,
   Trophy,
@@ -171,27 +172,80 @@ function GameSoundEffects() {
   return null;
 }
 
+function MobileLandscapePrompt() {
+  const [isPortraitMobile, setIsPortraitMobile] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const updateOrientationState = () => {
+      const isMobileViewport = window.innerWidth < 1024;
+      const isPortrait = window.innerHeight > window.innerWidth;
+      setIsPortraitMobile(isMobileViewport && isPortrait);
+    };
+
+    updateOrientationState();
+
+    const orientationApi = (window.screen as Screen & {
+      orientation?: {
+        lock?: (orientation: 'landscape' | 'portrait') => Promise<void>;
+      };
+    }).orientation;
+
+    if (window.innerWidth < 1024 && orientationApi?.lock) {
+      void orientationApi.lock('landscape').catch(() => {
+        // Mobile browsers often require fullscreen/PWA context for orientation lock.
+      });
+    }
+
+    window.addEventListener('resize', updateOrientationState);
+    window.addEventListener('orientationchange', updateOrientationState);
+
+    return () => {
+      window.removeEventListener('resize', updateOrientationState);
+      window.removeEventListener('orientationchange', updateOrientationState);
+    };
+  }, []);
+
+  if (!isPortraitMobile) return null;
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#f5eed8] px-6 text-center lg:hidden">
+      <div className="max-w-sm rounded-[2rem] border border-white/60 bg-white/70 px-6 py-8 shadow-[0_18px_40px_rgba(114,98,57,0.12)] backdrop-blur-md">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <Smartphone size={30} />
+        </div>
+        <p className="mt-5 text-xl font-black text-foreground">請將手機橫向使用</p>
+        <p className="mt-3 text-sm leading-relaxed text-foreground/70">
+          這個遊戲在手機上已改成橫向版面。旋轉裝置後，棋盤與選字池會完整顯示。
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function GameRoot({ children }: { children: React.ReactNode }) {
   const childArray = React.Children.toArray(children);
   const [header, board, dock, overlay] = childArray;
 
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden px-2 py-2 sm:px-4 sm:py-4 lg:px-5 lg:py-5 xl:px-6">
+      <MobileLandscapePrompt />
       <div className="animate-float absolute left-[-10%] top-[-10%] hidden h-64 w-64 rounded-full bg-secondary/10 blur-3xl lg:block" />
       <div
         className="absolute bottom-[-10%] right-[-10%] hidden h-64 w-64 rounded-full bg-accent/10 blur-3xl lg:block"
         style={{ animationDelay: '1.5s' }}
       />
 
-      <div className="relative z-10 grid h-full min-h-0 w-full grid-rows-[auto_minmax(0,1fr)_auto] gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,calc(100dvh-2rem))_minmax(0,1fr)] lg:grid-rows-1 lg:gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,calc(100dvh-2.5rem))_minmax(0,1fr)] xl:gap-6">
-        <div className="order-1 lg:min-h-0 lg:w-[240px] lg:justify-self-end xl:w-[260px]">
+      <div className="game-shell relative z-10 h-full min-h-0 w-full">
+        <div className="game-header-slot">
           {header}
         </div>
-        <div className="order-2 flex min-h-0 items-center justify-center lg:justify-center">
+        <div className="game-board-slot">
           {board}
         </div>
-        <div className="order-3 lg:flex lg:min-h-0 lg:w-[240px] lg:flex-col lg:justify-self-start lg:overflow-hidden xl:w-[260px]">
-          <div className="lg:flex-1 lg:min-h-0">{dock}</div>
+        <div className="game-dock-slot">
+          <div className="game-dock-inner">{dock}</div>
         </div>
         <GameSoundEffects />
         {overlay}

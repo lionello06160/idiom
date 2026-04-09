@@ -1,5 +1,4 @@
-import { GameGenerator, type GridCell, type PlacedIdiom } from '@/lib/generator';
-import { IDIOMS } from '@/lib/idioms';
+import type { GridCell, PlacedIdiom } from '@/lib/generator';
 
 export type SelectedCell = [number, number] | null;
 export type FeedbackTone = 'success' | 'warning' | 'error';
@@ -33,11 +32,6 @@ export interface SharedGameState {
 }
 
 export const GRID_SIZE = 8;
-const BASE_HINT_REVEAL_RATE = 0.18;
-const EXTRA_CANDIDATES = 6;
-const MIN_VISIBLE_CELLS = 3;
-const MIN_INTERSECTION_HINTS = 2;
-const ALL_IDIOM_CHARS = Array.from(new Set(IDIOMS.flatMap((idiom) => Array.from(idiom.word))));
 
 export function cloneGrid<T>(grid: T[][]) {
   return grid.map((row) => [...row]);
@@ -185,58 +179,18 @@ function countVisibleCells(revealed: boolean[][]) {
   return revealed.flat().filter(Boolean).length;
 }
 
-export function createSharedLevelState(level: number, previousScore = 0): SharedGameState {
-  const generator = new GameGenerator(GRID_SIZE);
-  const idiomCount = Math.min(5 + Math.floor(level / 2), 10);
-  const { grid, idioms } = generator.generate(idiomCount);
-
-  const userGrid = grid.map((row) => row.map(() => ''));
-  const revealed = grid.map((row) =>
-    row.map((cell) => {
-      if (!cell) return false;
-      return Math.random() < Math.max(0.08, BASE_HINT_REVEAL_RATE - level * 0.01);
-    })
-  );
-
-  const intersectionCells = shuffle(getIntersectionCells(idioms));
-
-  intersectionCells.slice(0, MIN_INTERSECTION_HINTS).forEach(([row, col]) => {
-    revealed[row][col] = true;
-  });
-
-  if (countVisibleCells(revealed) < MIN_VISIBLE_CELLS) {
-    const fallbackCells = shuffle(
-      grid.flatMap((row, y) =>
-        row.flatMap((cell, x) => (cell ? [[y, x] as [number, number]] : []))
-      )
-    );
-
-    for (const [row, col] of fallbackCells) {
-      if (countVisibleCells(revealed) >= MIN_VISIBLE_CELLS) break;
-      revealed[row][col] = true;
-    }
-  }
-
-  const hiddenChars = grid.flatMap((row, y) =>
-    row.flatMap((cell, x) => (cell && !revealed[y][x] ? [cell.char] : []))
-  );
-
-  const distractors = shuffle(
-    ALL_IDIOM_CHARS.filter((char) => !hiddenChars.includes(char))
-  ).slice(0, Math.min(EXTRA_CANDIDATES + Math.floor(level / 2), 12));
-
-  const candidates = shuffle([...hiddenChars, ...distractors]);
-  const totalCells = getTotalCells(grid);
-  const solvedCells = countSolvedCells(grid, userGrid, revealed);
-
+export function createEmptySharedLevelState(level = 1, previousScore = 0): SharedGameState {
+  const grid = Array.from({ length: GRID_SIZE }, () => Array.from({ length: GRID_SIZE }, () => null));
+  const userGrid = Array.from({ length: GRID_SIZE }, () => Array.from({ length: GRID_SIZE }, () => ''));
+  const revealed = Array.from({ length: GRID_SIZE }, () => Array.from({ length: GRID_SIZE }, () => false));
   return {
     grid,
     userGrid,
     revealed,
-    placedIdioms: idioms,
+    placedIdioms: [],
     activeIdiomKey: null,
-    selectedCell: findNextEditableCell(grid, revealed, userGrid),
-    candidates,
+    selectedCell: null,
+    candidates: [],
     isComplete: false,
     level,
     stats: {
@@ -244,8 +198,8 @@ export function createSharedLevelState(level: number, previousScore = 0): Shared
       streak: 0,
       mistakes: 0,
       hintsUsed: 0,
-      solvedCells,
-      totalCells,
+      solvedCells: 0,
+      totalCells: 0,
     },
   };
 }

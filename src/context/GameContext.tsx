@@ -5,7 +5,7 @@ import type { PlacedIdiom } from '@/lib/generator';
 import {
   cloneGrid,
   countSolvedCells,
-  createSharedLevelState,
+  createEmptySharedLevelState,
   findNextEditableCell,
   findNextEditableCellInIdiom,
   getIdiomCells,
@@ -41,7 +41,7 @@ interface GameContextType extends GameState {
 }
 
 const EMPTY_STATE: GameState = {
-  ...createSharedLevelState(1),
+  ...createEmptySharedLevelState(1),
   isReady: false,
   toast: null,
   syncVersion: 0,
@@ -53,6 +53,21 @@ const GameContext = createContext<GameContextType | undefined>(undefined);
 async function fetchServerSnapshot(): Promise<ServerSnapshot> {
   const response = await fetch('/api/game-state', { cache: 'no-store' });
   if (!response.ok) throw new Error('Failed to load shared game state');
+  return response.json();
+}
+
+async function requestGeneratedSnapshot(
+  action: 'nextLevel' | 'resetLevel',
+  level: number,
+  previousScore: number
+): Promise<ServerSnapshot> {
+  const response = await fetch('/api/game-state', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, level, previousScore }),
+  });
+
+  if (!response.ok) throw new Error('Failed to generate next shared game state');
   return response.json();
 }
 
@@ -160,7 +175,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         );
       } catch {
         if (!active) return;
-        const fallback = createSharedLevelState(1);
+        const fallback = createEmptySharedLevelState(1);
         setState({ ...withToast(fallback, 0, { id: Date.now(), text: '離線模式', tone: 'warning' }), syncStatus: 'offline' });
       }
     };
@@ -456,16 +471,42 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   );
 
   const nextLevel = useCallback(() => {
-    const nextState = createSharedLevelState(state.level + 1, state.stats.score);
-    setState(withToast(nextState, state.syncVersion, { id: Date.now(), text: `第 ${state.level + 1} 關開始`, tone: 'warning' }));
-    void pushStateToServer(nextState, { id: Date.now(), text: `第 ${state.level + 1} 關開始`, tone: 'warning' });
-  }, [pushStateToServer, state.level, state.stats.score, state.syncVersion]);
+    const toast = { id: Date.now(), text: `第 ${state.level + 1} 關開始`, tone: 'warning' } as const;
+    setState((prev) => ({ ...prev, syncStatus: 'syncing' }));
+
+    void requestGeneratedSnapshot('nextLevel', state.level + 1, state.stats.score)
+      .then((snapshot) => {
+        syncVersionRef.current = snapshot.version;
+        setState({ ...withToast(snapshot.state, snapshot.version, toast), syncStatus: 'syncing' });
+        scheduleSyncedState();
+      })
+      .catch(() => {
+        setState((prev) => ({
+          ...prev,
+          syncStatus: 'offline',
+          toast: { id: Date.now(), text: '下一關載入失敗', tone: 'error' },
+        }));
+      });
+  }, [scheduleSyncedState, state.level, state.stats.score]);
 
   const resetLevel = useCallback(() => {
-    const nextState = createSharedLevelState(state.level, Math.max(0, state.stats.score - 10));
-    setState(withToast(nextState, state.syncVersion, { id: Date.now(), text: `第 ${state.level} 關重新開始`, tone: 'warning' }));
-    void pushStateToServer(nextState, { id: Date.now(), text: `第 ${state.level} 關重新開始`, tone: 'warning' });
-  }, [pushStateToServer, state.level, state.stats.score, state.syncVersion]);
+    const toast = { id: Date.now(), text: `第 ${state.level} 關重新開始`, tone: 'warning' } as const;
+    setState((prev) => ({ ...prev, syncStatus: 'syncing' }));
+
+    void requestGeneratedSnapshot('resetLevel', state.level, Math.max(0, state.stats.score - 10))
+      .then((snapshot) => {
+        syncVersionRef.current = snapshot.version;
+        setState({ ...withToast(snapshot.state, snapshot.version, toast), syncStatus: 'syncing' });
+        scheduleSyncedState();
+      })
+      .catch(() => {
+        setState((prev) => ({
+          ...prev,
+          syncStatus: 'offline',
+          toast: { id: Date.now(), text: '重新開始失敗', tone: 'error' },
+        }));
+      });
+  }, [scheduleSyncedState, state.level, state.stats.score]);
 
   return (
     <GameContext.Provider
