@@ -33,6 +33,7 @@ yarn-error.log*
 # local runtime/artifacts
 data/
 .codex-screenshots/
+tmp/
 
 # env files (can opt-in for committing if needed)
 .env*
