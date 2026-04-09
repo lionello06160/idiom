@@ -506,7 +506,7 @@ export function GameDock() {
       </div>
 
       <div className="glass rounded-[1.25rem] p-2 sm:rounded-[1.75rem] sm:p-5 lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:p-4">
-        <div className="grid grid-cols-6 content-start gap-1.5 sm:grid-cols-4 sm:gap-3">
+        <div className="grid grid-cols-7 content-start gap-1.5 sm:grid-cols-4 sm:gap-3">
           {candidates.map((char, index) => (
             <motion.button
               key={`${char}-${index}`}
