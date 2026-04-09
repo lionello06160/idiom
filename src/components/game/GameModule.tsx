@@ -67,6 +67,7 @@ function playToneSequence(
   tones: Array<{ frequency: number; duration: number; gain: number }>,
   type: OscillatorType = 'sine'
 ) {
+  const gainBoost = 1.7;
   let offset = context.currentTime;
 
   tones.forEach(({ frequency, duration, gain }) => {
@@ -77,7 +78,7 @@ function playToneSequence(
     oscillator.frequency.setValueAtTime(frequency, offset);
 
     gainNode.gain.setValueAtTime(0.0001, offset);
-    gainNode.gain.exponentialRampToValueAtTime(gain, offset + 0.02);
+    gainNode.gain.exponentialRampToValueAtTime(Math.min(gain * gainBoost, 0.12), offset + 0.02);
     gainNode.gain.exponentialRampToValueAtTime(0.0001, offset + duration);
 
     oscillator.connect(gainNode);
@@ -129,8 +130,20 @@ function GameSoundEffects() {
         ],
         'triangle'
       );
+      return;
     }
-  }, [getAudioContext, toast]);
+
+    if (toast.tone === 'success' && !isComplete) {
+      playToneSequence(
+        context,
+        [
+          { frequency: 523.25, duration: 0.09, gain: 0.028 },
+          { frequency: 659.25, duration: 0.12, gain: 0.032 },
+        ],
+        'sine'
+      );
+    }
+  }, [getAudioContext, isComplete, toast]);
 
   React.useEffect(() => {
     if (isComplete && !completedRef.current) {
