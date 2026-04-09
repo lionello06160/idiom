@@ -12,7 +12,7 @@ import {
 } from '@/lib/game-shared';
 
 const BASE_HINT_REVEAL_RATE = 0.18;
-const EXTRA_CANDIDATES = 6;
+const EXTRA_CANDIDATES = 1;
 const MIN_VISIBLE_CELLS = 3;
 const MIN_INTERSECTION_HINTS = 2;
 const EXTRA_INITIAL_REVEALS = 2;
@@ -94,7 +94,7 @@ export function createSharedLevelState(level: number, previousScore = 0): Shared
 
   const distractors = shuffle(
     ALL_IDIOM_CHARS.filter((char) => !hiddenChars.includes(char))
-  ).slice(0, Math.min(EXTRA_CANDIDATES + Math.floor(level / 2), 12));
+  ).slice(0, Math.min(EXTRA_CANDIDATES + Math.floor(level / 2), 7));
 
   const candidates = shuffle([...hiddenChars, ...distractors]);
   const totalCells = getTotalCells(grid);
