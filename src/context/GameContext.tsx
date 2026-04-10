@@ -28,6 +28,10 @@ interface ServerSnapshot {
   version: number;
 }
 
+interface PrefetchedSnapshot {
+  state: SharedGameState;
+}
+
 interface GameContextType extends GameState {
   progressPercent: number;
   currentIdiom: PlacedIdiom | null;
@@ -71,6 +75,28 @@ async function requestGeneratedSnapshot(
   return response.json();
 }
 
+async function requestPrefetchedSnapshot(level: number, previousScore: number): Promise<PrefetchedSnapshot> {
+  const response = await fetch('/api/game-state', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'prefetchLevel', level, previousScore }),
+  });
+
+  if (!response.ok) throw new Error('Failed to prefetch shared game state');
+  return response.json();
+}
+
+async function commitGeneratedState(state: SharedGameState): Promise<ServerSnapshot> {
+  const response = await fetch('/api/game-state', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ state }),
+  });
+
+  if (!response.ok) throw new Error('Failed to activate shared game state');
+  return response.json();
+}
+
 function withToast(state: SharedGameState, version: number, toast: ToastMessage | null): GameState {
   return {
     ...state,
@@ -87,6 +113,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const syncingRef = useRef(false);
   const pendingSyncRef = useRef<SharedGameState | null>(null);
   const syncStatusTimeoutRef = useRef<number | null>(null);
+  const prefetchedLevelRef = useRef<SharedGameState | null>(null);
+  const prefetchingLevelRef = useRef<number | null>(null);
 
   const scheduleSyncedState = useCallback(() => {
     if (typeof window === 'undefined') return;
@@ -241,6 +269,32 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
     return () => window.clearTimeout(timer);
   }, [state.toast]);
+
+  useEffect(() => {
+    if (!state.isReady) return;
+
+    const targetLevel = state.level + 1;
+    if (prefetchedLevelRef.current?.level === targetLevel) return;
+    if (prefetchingLevelRef.current === targetLevel) return;
+
+    prefetchingLevelRef.current = targetLevel;
+
+    void requestPrefetchedSnapshot(targetLevel, state.stats.score)
+      .then((snapshot) => {
+        if (prefetchingLevelRef.current !== targetLevel) return;
+        prefetchedLevelRef.current = snapshot.state;
+      })
+      .catch(() => {
+        if (prefetchingLevelRef.current === targetLevel) {
+          prefetchedLevelRef.current = null;
+        }
+      })
+      .finally(() => {
+        if (prefetchingLevelRef.current === targetLevel) {
+          prefetchingLevelRef.current = null;
+        }
+      });
+  }, [state.isReady, state.level, state.stats.score]);
 
   const currentIdiom = useMemo(
     () => getIdiomForCell(state.placedIdioms, state.grid, state.selectedCell, state.activeIdiomKey),
@@ -472,11 +526,46 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const nextLevel = useCallback(() => {
     const toast = { id: Date.now(), text: `第 ${state.level + 1} 關開始`, tone: 'warning' } as const;
+    const prefetched = prefetchedLevelRef.current;
+
+    if (prefetched?.level === state.level + 1) {
+      const nextState: SharedGameState = {
+        ...prefetched,
+        stats: {
+          ...prefetched.stats,
+          score: state.stats.score,
+        },
+      };
+
+      prefetchedLevelRef.current = null;
+      setState((prev) => ({
+        ...withToast(nextState, prev.syncVersion, toast),
+        syncStatus: 'syncing',
+      }));
+
+      void commitGeneratedState(nextState)
+        .then((snapshot) => {
+          syncVersionRef.current = snapshot.version;
+          setState({ ...withToast(snapshot.state, snapshot.version, toast), syncStatus: 'syncing' });
+          scheduleSyncedState();
+        })
+        .catch(() => {
+          prefetchedLevelRef.current = nextState;
+          setState((prev) => ({
+            ...prev,
+            syncStatus: 'offline',
+            toast: { id: Date.now(), text: '下一關同步失敗', tone: 'error' },
+          }));
+        });
+      return;
+    }
+
     setState((prev) => ({ ...prev, syncStatus: 'syncing' }));
 
     void requestGeneratedSnapshot('nextLevel', state.level + 1, state.stats.score)
       .then((snapshot) => {
         syncVersionRef.current = snapshot.version;
+        prefetchedLevelRef.current = null;
         setState({ ...withToast(snapshot.state, snapshot.version, toast), syncStatus: 'syncing' });
         scheduleSyncedState();
       })
@@ -492,6 +581,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const resetLevel = useCallback(() => {
     const toast = { id: Date.now(), text: `第 ${state.level} 關重新開始`, tone: 'warning' } as const;
     setState((prev) => ({ ...prev, syncStatus: 'syncing' }));
+    prefetchedLevelRef.current = null;
 
     void requestGeneratedSnapshot('resetLevel', state.level, Math.max(0, state.stats.score - 10))
       .then((snapshot) => {

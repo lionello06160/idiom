@@ -109,6 +109,16 @@ export async function resetServerState(level = 1, previousScore = 0) {
   return store.snapshot;
 }
 
+export async function generateServerState(level = 1, previousScore = 0) {
+  await ensureServerStoreReady();
+
+  return {
+    state: createSharedLevelState(level, previousScore),
+    version: store.snapshot.version,
+    updatedAt: Date.now(),
+  };
+}
+
 export function subscribeToServerState(listener: Listener) {
   store.listeners.add(listener);
   return () => store.listeners.delete(listener);

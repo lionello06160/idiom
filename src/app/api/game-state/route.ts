@@ -1,4 +1,4 @@
-import { getServerSnapshot, resetServerState, setServerState } from '@/lib/game-server-store';
+import { generateServerState, getServerSnapshot, resetServerState, setServerState } from '@/lib/game-server-store';
 import { isValidSharedState } from '@/lib/game-shared';
 
 export const dynamic = 'force-dynamic';
@@ -25,8 +25,13 @@ export async function POST(request: Request) {
   const level = typeof body?.level === 'number' ? body.level : 1;
   const previousScore = typeof body?.previousScore === 'number' ? body.previousScore : 0;
 
-  if (action !== 'nextLevel' && action !== 'resetLevel') {
+  if (action !== 'nextLevel' && action !== 'resetLevel' && action !== 'prefetchLevel') {
     return Response.json({ error: 'Invalid game-state action' }, { status: 400 });
+  }
+
+  if (action === 'prefetchLevel') {
+    const snapshot = await generateServerState(level, previousScore);
+    return Response.json({ state: snapshot.state });
   }
 
   const snapshot = await resetServerState(level, previousScore);
