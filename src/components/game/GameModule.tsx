@@ -91,6 +91,38 @@ function playToneSequence(
   });
 }
 
+function playErrorTone(context: AudioContext) {
+  const start = context.currentTime;
+  const masterGain = context.createGain();
+
+  masterGain.gain.setValueAtTime(0.0001, start);
+  masterGain.gain.exponentialRampToValueAtTime(0.16, start + 0.015);
+  masterGain.gain.exponentialRampToValueAtTime(0.09, start + 0.11);
+  masterGain.gain.exponentialRampToValueAtTime(0.18, start + 0.16);
+  masterGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.34);
+  masterGain.connect(context.destination);
+
+  const upperOscillator = context.createOscillator();
+  upperOscillator.type = 'sawtooth';
+  upperOscillator.frequency.setValueAtTime(980, start);
+  upperOscillator.frequency.exponentialRampToValueAtTime(540, start + 0.14);
+  upperOscillator.frequency.exponentialRampToValueAtTime(760, start + 0.24);
+  upperOscillator.frequency.exponentialRampToValueAtTime(420, start + 0.34);
+  upperOscillator.connect(masterGain);
+  upperOscillator.start(start);
+  upperOscillator.stop(start + 0.34);
+
+  const lowerOscillator = context.createOscillator();
+  lowerOscillator.type = 'square';
+  lowerOscillator.frequency.setValueAtTime(220, start);
+  lowerOscillator.frequency.exponentialRampToValueAtTime(160, start + 0.14);
+  lowerOscillator.frequency.exponentialRampToValueAtTime(210, start + 0.24);
+  lowerOscillator.frequency.exponentialRampToValueAtTime(140, start + 0.34);
+  lowerOscillator.connect(masterGain);
+  lowerOscillator.start(start);
+  lowerOscillator.stop(start + 0.34);
+}
+
 function GameSoundEffects() {
   const { toast, isComplete } = useGame();
   const audioContextRef = React.useRef<AudioContext | null>(null);
@@ -138,14 +170,7 @@ function GameSoundEffects() {
       if (!context) return;
 
       if (toast.tone === 'error') {
-        playToneSequence(
-          context,
-          [
-            { frequency: 280, duration: 0.12, gain: 0.045 },
-            { frequency: 220, duration: 0.16, gain: 0.04 },
-          ],
-          'triangle'
-        );
+        playErrorTone(context);
         return;
       }
 
