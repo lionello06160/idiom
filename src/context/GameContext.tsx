@@ -20,6 +20,7 @@ interface GameState extends SharedGameState {
   toast: ToastMessage | null;
   isReady: boolean;
   isAdvancing: boolean;
+  isResetting: boolean;
   nextLevelStatus: 'idle' | 'loading' | 'ready' | 'error';
   syncVersion: number;
   syncStatus: 'connecting' | 'synced' | 'syncing' | 'offline';
@@ -51,6 +52,7 @@ const EMPTY_STATE: GameState = {
   ...createEmptySharedLevelState(1),
   isReady: false,
   isAdvancing: false,
+  isResetting: false,
   nextLevelStatus: 'idle',
   toast: null,
   syncVersion: 0,
@@ -108,7 +110,8 @@ function withToast(state: SharedGameState, version: number, toast: ToastMessage 
     toast,
     isReady: true,
     isAdvancing: false,
-    nextLevelStatus: 'idle',
+    isResetting: false,
+    nextLevelStatus: 'loading',
     syncVersion: version,
     syncStatus: 'synced',
   };
@@ -178,6 +181,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           ...result.next,
           isReady: true,
           isAdvancing: prev.isAdvancing,
+          isResetting: prev.isResetting,
           nextLevelStatus: prev.nextLevelStatus,
           syncVersion: prev.syncVersion,
           toast: result.toast,
@@ -603,8 +607,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, [scheduleSyncedState, state.isAdvancing, state.level, state.stats.score]);
 
   const resetLevel = useCallback(() => {
+    if (state.isResetting) return;
+
     const toast = { id: Date.now(), text: `第 ${state.level} 關重新開始`, tone: 'warning' } as const;
-    setState((prev) => ({ ...prev, syncStatus: 'syncing' }));
+    setState((prev) => ({ ...prev, isResetting: true, nextLevelStatus: 'loading', syncStatus: 'syncing' }));
     prefetchedLevelRef.current = null;
 
     void requestGeneratedSnapshot('resetLevel', state.level, Math.max(0, state.stats.score - 10))
@@ -616,11 +622,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       .catch(() => {
         setState((prev) => ({
           ...prev,
+          isResetting: false,
           syncStatus: 'offline',
           toast: { id: Date.now(), text: '重新開始失敗', tone: 'error' },
         }));
       });
-  }, [scheduleSyncedState, state.level, state.stats.score]);
+  }, [scheduleSyncedState, state.isResetting, state.level, state.stats.score]);
 
   return (
     <GameContext.Provider

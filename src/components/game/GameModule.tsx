@@ -250,6 +250,7 @@ export function GameHeader() {
     stats,
     progressPercent,
     currentIdiom,
+    isResetting,
     syncStatus,
     nextLevelStatus,
     toast,
@@ -342,12 +343,18 @@ export function GameHeader() {
               <button
                 type="button"
                 onClick={() => {
+                  if (isResetting) return;
                   setShowResetConfirm(false);
                   resetLevel();
                 }}
-                className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-primary/90"
+                disabled={isResetting}
+                className={cn(
+                  'rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white shadow-md transition',
+                  !isResetting && 'hover:bg-primary/90',
+                  isResetting && 'cursor-wait opacity-80'
+                )}
               >
-                確認重開
+                {isResetting ? '重開中...' : '確認重開'}
               </button>
             </div>
           </motion.div>
