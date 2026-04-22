@@ -11,11 +11,11 @@ import {
   type SharedGameState,
 } from '@/lib/game-shared';
 
-const BASE_HINT_REVEAL_RATE = 0.18;
+const BASE_HINT_REVEAL_RATE = 0.22;
 const EXTRA_CANDIDATES = 1;
-const MIN_VISIBLE_CELLS = 3;
-const MIN_INTERSECTION_HINTS = 2;
-const EXTRA_INITIAL_REVEALS = 2;
+const MIN_VISIBLE_CELLS = 5;
+const MIN_INTERSECTION_HINTS = 3;
+const EXTRA_INITIAL_REVEALS = 3;
 const ALL_IDIOM_CHARS = Array.from(new Set(IDIOMS.flatMap((idiom) => Array.from(idiom.word))));
 
 function getIdiomCells(placed: { direction: 'H' | 'V'; x: number; y: number; idiom: { word: string } }) {
@@ -55,7 +55,7 @@ export function createSharedLevelState(level: number, previousScore = 0): Shared
   const revealed = grid.map((row) =>
     row.map((cell) => {
       if (!cell) return false;
-      return Math.random() < Math.max(0.08, BASE_HINT_REVEAL_RATE - level * 0.01);
+      return Math.random() < Math.max(0.12, BASE_HINT_REVEAL_RATE - level * 0.01);
     })
   );
 

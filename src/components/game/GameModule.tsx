@@ -4,6 +4,7 @@ import React from 'react';
 import { useGame } from '@/context/GameContext';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
+  LoaderCircle,
   Lightbulb,
   RotateCcw,
   Sparkles,
@@ -250,6 +251,7 @@ export function GameHeader() {
     progressPercent,
     currentIdiom,
     syncStatus,
+    nextLevelStatus,
     toast,
     useHint,
     resetLevel,
@@ -425,6 +427,23 @@ export function GameHeader() {
         </AnimatePresence>
       </div>
 
+      <div className="hidden items-center justify-between rounded-[1rem] bg-white/45 px-4 py-3 text-sm font-semibold text-foreground/70 sm:flex">
+        <span>下一關</span>
+        <span className={cn(
+          'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold',
+          nextLevelStatus === 'ready' && 'bg-emerald-100 text-emerald-700',
+          nextLevelStatus === 'loading' && 'bg-amber-100 text-amber-700',
+          nextLevelStatus === 'error' && 'bg-rose-100 text-rose-700',
+          nextLevelStatus === 'idle' && 'bg-slate-100 text-slate-600'
+        )}>
+          {nextLevelStatus === 'loading' ? <LoaderCircle size={14} className="animate-spin" /> : null}
+          {nextLevelStatus === 'ready' ? '已預載完成' : null}
+          {nextLevelStatus === 'loading' ? '背景生成中' : null}
+          {nextLevelStatus === 'error' ? '預載失敗' : null}
+          {nextLevelStatus === 'idle' ? '尚未開始' : null}
+        </span>
+      </div>
+
       <AnimatePresence>
         {toast ? (
           <motion.div
@@ -551,7 +570,7 @@ export function GameDock() {
 }
 
 export function GameOverlay() {
-  const { isComplete, nextLevel, level, stats, isReady } = useGame();
+  const { isAdvancing, isComplete, isNextLevelReady, nextLevel, nextLevelStatus, level, stats, isReady } = useGame();
 
   if (!isReady) return null;
 
@@ -597,12 +616,38 @@ export function GameOverlay() {
               重開本關會扣 10 分，提示每次扣 5 分
             </div>
 
+            <div className={cn(
+              'mb-4 flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold',
+              isNextLevelReady && 'bg-emerald-50 text-emerald-700',
+              !isNextLevelReady && nextLevelStatus !== 'error' && 'bg-sky-50 text-sky-700',
+              nextLevelStatus === 'error' && 'bg-rose-50 text-rose-700'
+            )}>
+              {isAdvancing || nextLevelStatus === 'loading' ? <LoaderCircle size={16} className="animate-spin" /> : null}
+              {isNextLevelReady ? '下一關已準備好，按下會直接切換' : null}
+              {!isNextLevelReady && nextLevelStatus === 'loading' ? '下一關仍在背景生成，首次切換可能稍等幾秒' : null}
+              {nextLevelStatus === 'error' ? '下一關預載失敗，按下後會重新嘗試生成' : null}
+            </div>
+
             <button
               type="button"
               onClick={nextLevel}
-              className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-8 py-4 text-xl font-bold text-white shadow-lg shadow-primary/30 transition-all hover:gap-4"
+              disabled={isAdvancing}
+              className={cn(
+                'group flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-8 py-4 text-xl font-bold text-white shadow-lg shadow-primary/30 transition-all',
+                !isAdvancing && 'hover:gap-4',
+                isAdvancing && 'cursor-wait opacity-80'
+              )}
             >
-              下一關 <ChevronRight />
+              {isAdvancing ? (
+                <>
+                  <LoaderCircle size={20} className="animate-spin" />
+                  載入下一關...
+                </>
+              ) : (
+                <>
+                  下一關 <ChevronRight />
+                </>
+              )}
             </button>
           </motion.div>
         </motion.div>

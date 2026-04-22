@@ -19,6 +19,8 @@ import {
 interface GameState extends SharedGameState {
   toast: ToastMessage | null;
   isReady: boolean;
+  isAdvancing: boolean;
+  nextLevelStatus: 'idle' | 'loading' | 'ready' | 'error';
   syncVersion: number;
   syncStatus: 'connecting' | 'synced' | 'syncing' | 'offline';
 }
@@ -36,6 +38,7 @@ interface GameContextType extends GameState {
   progressPercent: number;
   currentIdiom: PlacedIdiom | null;
   highlightedCells: [number, number][];
+  isNextLevelReady: boolean;
   selectCell: (row: number, col: number) => void;
   clearCell: (row: number, col: number) => void;
   fillCell: (char: string) => void;
@@ -47,6 +50,8 @@ interface GameContextType extends GameState {
 const EMPTY_STATE: GameState = {
   ...createEmptySharedLevelState(1),
   isReady: false,
+  isAdvancing: false,
+  nextLevelStatus: 'idle',
   toast: null,
   syncVersion: 0,
   syncStatus: 'connecting',
@@ -102,6 +107,8 @@ function withToast(state: SharedGameState, version: number, toast: ToastMessage 
     ...state,
     toast,
     isReady: true,
+    isAdvancing: false,
+    nextLevelStatus: 'idle',
     syncVersion: version,
     syncStatus: 'synced',
   };
@@ -170,6 +177,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         const nextState = {
           ...result.next,
           isReady: true,
+          isAdvancing: prev.isAdvancing,
+          nextLevelStatus: prev.nextLevelStatus,
           syncVersion: prev.syncVersion,
           toast: result.toast,
           syncStatus: 'syncing' as const,
@@ -277,16 +286,23 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     if (prefetchedLevelRef.current?.level === targetLevel) return;
     if (prefetchingLevelRef.current === targetLevel) return;
 
+    setState((prev) =>
+      prev.nextLevelStatus === 'ready' && prefetchedLevelRef.current?.level === targetLevel
+        ? prev
+        : { ...prev, nextLevelStatus: 'loading' }
+    );
     prefetchingLevelRef.current = targetLevel;
 
-    void requestPrefetchedSnapshot(targetLevel, state.stats.score)
+    void requestPrefetchedSnapshot(targetLevel, 0)
       .then((snapshot) => {
         if (prefetchingLevelRef.current !== targetLevel) return;
         prefetchedLevelRef.current = snapshot.state;
+        setState((prev) => ({ ...prev, nextLevelStatus: 'ready' }));
       })
       .catch(() => {
         if (prefetchingLevelRef.current === targetLevel) {
           prefetchedLevelRef.current = null;
+          setState((prev) => ({ ...prev, nextLevelStatus: 'error' }));
         }
       })
       .finally(() => {
@@ -294,7 +310,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           prefetchingLevelRef.current = null;
         }
       });
-  }, [state.isReady, state.level, state.stats.score]);
+  }, [state.isReady, state.level]);
 
   const currentIdiom = useMemo(
     () => getIdiomForCell(state.placedIdioms, state.grid, state.selectedCell, state.activeIdiomKey),
@@ -525,6 +541,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   );
 
   const nextLevel = useCallback(() => {
+    if (state.isAdvancing) return;
+
     const toast = { id: Date.now(), text: `第 ${state.level + 1} 關開始`, tone: 'warning' } as const;
     const prefetched = prefetchedLevelRef.current;
 
@@ -540,6 +558,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       prefetchedLevelRef.current = null;
       setState((prev) => ({
         ...withToast(nextState, prev.syncVersion, toast),
+        isAdvancing: true,
+        nextLevelStatus: 'loading',
         syncStatus: 'syncing',
       }));
 
@@ -553,6 +573,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           prefetchedLevelRef.current = nextState;
           setState((prev) => ({
             ...prev,
+            isAdvancing: false,
+            nextLevelStatus: 'ready',
             syncStatus: 'offline',
             toast: { id: Date.now(), text: '下一關同步失敗', tone: 'error' },
           }));
@@ -560,7 +582,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    setState((prev) => ({ ...prev, syncStatus: 'syncing' }));
+    setState((prev) => ({ ...prev, isAdvancing: true, nextLevelStatus: 'loading', syncStatus: 'syncing' }));
 
     void requestGeneratedSnapshot('nextLevel', state.level + 1, state.stats.score)
       .then((snapshot) => {
@@ -572,11 +594,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       .catch(() => {
         setState((prev) => ({
           ...prev,
+          isAdvancing: false,
+          nextLevelStatus: 'error',
           syncStatus: 'offline',
           toast: { id: Date.now(), text: '下一關載入失敗', tone: 'error' },
         }));
       });
-  }, [scheduleSyncedState, state.level, state.stats.score]);
+  }, [scheduleSyncedState, state.isAdvancing, state.level, state.stats.score]);
 
   const resetLevel = useCallback(() => {
     const toast = { id: Date.now(), text: `第 ${state.level} 關重新開始`, tone: 'warning' } as const;
@@ -605,6 +629,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         currentIdiom,
         highlightedCells,
         progressPercent,
+        isNextLevelReady: state.nextLevelStatus === 'ready',
         selectCell,
         clearCell,
         fillCell,

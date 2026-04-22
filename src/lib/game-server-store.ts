@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createSharedLevelState } from '@/lib/game-level-factory';
 import { isValidSharedState, type SharedGameState } from '@/lib/game-shared';
@@ -12,6 +12,8 @@ interface ServerSnapshot {
 type Listener = (version: number) => void;
 
 const STATE_FILE_PATH = path.join(process.cwd(), 'data', 'game-state.json');
+const STATE_FILE_TMP_PATH = `${STATE_FILE_PATH}.tmp`;
+const STATE_FILE_BACKUP_PATH = `${STATE_FILE_PATH}.bak`;
 
 const globalStore = globalThis as typeof globalThis & {
   __idiomStore?: {
@@ -37,30 +39,53 @@ const store = globalStore.__idiomStore;
 
 async function persistSnapshot(snapshot: ServerSnapshot) {
   await mkdir(path.dirname(STATE_FILE_PATH), { recursive: true });
-  await writeFile(STATE_FILE_PATH, JSON.stringify(snapshot, null, 2), 'utf8');
+  const payload = JSON.stringify(snapshot, null, 2);
+
+  await writeFile(STATE_FILE_TMP_PATH, payload, 'utf8');
+  await rename(STATE_FILE_TMP_PATH, STATE_FILE_PATH);
+  await copyFile(STATE_FILE_PATH, STATE_FILE_BACKUP_PATH);
+}
+
+function parseSnapshot(raw: string): ServerSnapshot | null {
+  const parsed = JSON.parse(raw) as Partial<ServerSnapshot>;
+
+  if (
+    parsed &&
+    typeof parsed === 'object' &&
+    typeof parsed.version === 'number' &&
+    typeof parsed.updatedAt === 'number' &&
+    isValidSharedState(parsed.state)
+  ) {
+    return {
+      state: parsed.state,
+      version: parsed.version,
+      updatedAt: parsed.updatedAt,
+    };
+  }
+
+  return null;
+}
+
+async function readSnapshotFile(filePath: string) {
+  try {
+    const raw = await readFile(filePath, 'utf8');
+    return parseSnapshot(raw);
+  } catch {
+    return null;
+  }
 }
 
 async function loadSnapshotFromDisk() {
-  try {
-    const raw = await readFile(STATE_FILE_PATH, 'utf8');
-    const parsed = JSON.parse(raw) as Partial<ServerSnapshot>;
+  const snapshot =
+    (await readSnapshotFile(STATE_FILE_PATH)) ??
+    (await readSnapshotFile(STATE_FILE_BACKUP_PATH));
 
-    if (
-      parsed &&
-      typeof parsed === 'object' &&
-      typeof parsed.version === 'number' &&
-      typeof parsed.updatedAt === 'number' &&
-      isValidSharedState(parsed.state)
-    ) {
-      store.snapshot = {
-        state: parsed.state,
-        version: parsed.version,
-        updatedAt: parsed.updatedAt,
-      };
-      return;
-    }
-  } catch {
-    // Fall through to initial snapshot persistence.
+  if (snapshot) {
+    store.snapshot = snapshot;
+
+    // Repair the primary file if only the backup survived a bad restart.
+    await persistSnapshot(store.snapshot);
+    return;
   }
 
   await persistSnapshot(store.snapshot);
