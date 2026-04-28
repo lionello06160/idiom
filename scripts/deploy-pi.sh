@@ -58,7 +58,7 @@ echo "==> Health check"
 ssh "${REMOTE_HOST}" "
   set -euo pipefail
   for _ in 1 2 3 4 5; do
-    if curl -fsS -I 'http://127.0.0.1:${APP_PORT}' >/tmp/${APP_NAME}-health.txt 2>/dev/null; then
+    if curl -fsS -I 'http://127.0.0.1:${APP_PORT}/api/game-state' >/tmp/${APP_NAME}-health.txt 2>/dev/null; then
       head -n 1 /tmp/${APP_NAME}-health.txt
       exit 0
     fi

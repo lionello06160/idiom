@@ -21,10 +21,16 @@ interface CandidatePlacement {
   direction: 'H' | 'V';
 }
 
+interface GenerateOptions {
+  maxAttempts?: number;
+  timeoutMs?: number;
+}
+
 export class GameGenerator {
   private grid: (GridCell | null)[][] = [];
   private size: number;
   private placedIdioms: PlacedIdiom[] = [];
+  private deadline = 0;
 
   constructor(size: number = 8) {
     this.size = size;
@@ -36,19 +42,22 @@ export class GameGenerator {
     this.placedIdioms = [];
   }
 
-  public generate(targetCount: number = 6): { grid: (GridCell | null)[][], idioms: PlacedIdiom[] } {
+  public generate(targetCount: number = 6, options: GenerateOptions = {}): { grid: (GridCell | null)[][], idioms: PlacedIdiom[] } {
+    const maxAttempts = options.maxAttempts ?? 50;
+    this.deadline = options.timeoutMs ? Date.now() + options.timeoutMs : 0;
     let attempts = 0;
-    while (attempts < 50) {
+    while (attempts < maxAttempts && !this.isTimedOut()) {
       this.resetGrid();
       if (this.recursivePlace(targetCount)) {
         return { grid: this.grid, idioms: this.placedIdioms };
       }
       attempts++;
     }
-    throw new Error('Could not generate a valid grid after 50 attempts.');
+    throw new Error(`Could not generate a valid grid with ${targetCount} idioms.`);
   }
 
   private recursivePlace(remaining: number): boolean {
+    if (this.isTimedOut()) return false;
     if (remaining === 0) return true;
 
     if (this.placedIdioms.length === 0) {
@@ -80,6 +89,10 @@ export class GameGenerator {
     }
 
     return false;
+  }
+
+  private isTimedOut() {
+    return this.deadline > 0 && Date.now() > this.deadline;
   }
 
   private findCandidates(): CandidatePlacement[] {

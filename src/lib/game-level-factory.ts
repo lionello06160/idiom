@@ -16,6 +16,8 @@ const EXTRA_CANDIDATES = 1;
 const MIN_VISIBLE_CELLS = 5;
 const MIN_INTERSECTION_HINTS = 3;
 const EXTRA_INITIAL_REVEALS = 3;
+const MAX_GENERATION_MS = 700;
+const MIN_IDIOM_COUNT = 7;
 const ALL_IDIOM_CHARS = Array.from(new Set(IDIOMS.flatMap((idiom) => Array.from(idiom.word))));
 
 function getIdiomCells(placed: { direction: 'H' | 'V'; x: number; y: number; idiom: { word: string } }) {
@@ -49,7 +51,22 @@ function countVisibleCells(revealed: boolean[][]) {
 export function createSharedLevelState(level: number, previousScore = 0): SharedGameState {
   const generator = new GameGenerator(GRID_SIZE);
   const idiomCount = Math.min(5 + Math.floor(level / 2), 10);
-  const { grid, idioms } = generator.generate(idiomCount);
+  let generated: ReturnType<GameGenerator['generate']> | null = null;
+
+  for (let targetCount = idiomCount; targetCount >= MIN_IDIOM_COUNT; targetCount--) {
+    try {
+      generated = generator.generate(targetCount, { timeoutMs: MAX_GENERATION_MS, maxAttempts: 8 });
+      break;
+    } catch {
+      // High-density boards can be expensive; degrade density before blocking the server.
+    }
+  }
+
+  if (!generated) {
+    generated = generator.generate(MIN_IDIOM_COUNT - 1, { timeoutMs: MAX_GENERATION_MS, maxAttempts: 8 });
+  }
+
+  const { grid, idioms } = generated;
 
   const userGrid = grid.map((row) => row.map(() => ''));
   const revealed = grid.map((row) =>
