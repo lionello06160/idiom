@@ -21,6 +21,19 @@ interface GameState extends SharedGameState {
   isReady: boolean;
   isAdvancing: boolean;
   isResetting: boolean;
+  answerEffect: {
+    id: number;
+    row: number;
+    col: number;
+    kind: 'correct' | 'wrong';
+    streak: number;
+  } | null;
+  idiomEffect: {
+    id: number;
+    word: string;
+    definition: string;
+    streak: number;
+  } | null;
   nextLevelStatus: 'idle' | 'loading' | 'ready' | 'error';
   syncVersion: number;
   syncStatus: 'connecting' | 'synced' | 'syncing' | 'offline';
@@ -53,6 +66,8 @@ const EMPTY_STATE: GameState = {
   isReady: false,
   isAdvancing: false,
   isResetting: false,
+  answerEffect: null,
+  idiomEffect: null,
   nextLevelStatus: 'idle',
   toast: null,
   syncVersion: 0,
@@ -111,10 +126,24 @@ function withToast(state: SharedGameState, version: number, toast: ToastMessage 
     isReady: true,
     isAdvancing: false,
     isResetting: false,
+    answerEffect: null,
+    idiomEffect: null,
     nextLevelStatus: 'loading',
     syncVersion: version,
     syncStatus: 'synced',
   };
+}
+
+function isPlacedIdiomSolved(
+  placed: PlacedIdiom,
+  grid: SharedGameState['grid'],
+  userGrid: SharedGameState['userGrid'],
+  revealed: SharedGameState['revealed']
+) {
+  return getIdiomCells(placed).every(([row, col]) => {
+    const cell = grid[row]?.[col];
+    return Boolean(cell && (revealed[row][col] || userGrid[row][col] === cell.char));
+  });
 }
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
@@ -164,7 +193,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       const snapshot = (await response.json()) as ServerSnapshot;
       syncVersionRef.current = snapshot.version;
-      setState({ ...withToast(snapshot.state, snapshot.version, toast), syncStatus: 'syncing' });
+      setState((prev) => ({
+        ...withToast(snapshot.state, snapshot.version, toast),
+        answerEffect: prev.answerEffect,
+        idiomEffect: prev.idiomEffect,
+        syncStatus: 'syncing',
+      }));
     }
 
     syncingRef.current = false;
@@ -172,7 +206,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, [scheduleSyncedState]);
 
   const applyLocalUpdate = useCallback(
-    (updater: (prev: SharedGameState) => { next: SharedGameState; toast: ToastMessage | null } | null) => {
+    (
+      updater: (
+        prev: SharedGameState
+      ) => {
+        next: SharedGameState;
+        toast: ToastMessage | null;
+        answerEffect?: GameState['answerEffect'];
+        idiomEffect?: GameState['idiomEffect'];
+      } | null
+    ) => {
       setState((prev) => {
         const result = updater(prev);
         if (!result) return prev;
@@ -182,6 +225,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           isReady: true,
           isAdvancing: prev.isAdvancing,
           isResetting: prev.isResetting,
+          answerEffect: result.answerEffect ?? prev.answerEffect,
+          idiomEffect: result.idiomEffect ?? prev.idiomEffect,
           nextLevelStatus: prev.nextLevelStatus,
           syncVersion: prev.syncVersion,
           toast: result.toast,
@@ -282,6 +327,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
     return () => window.clearTimeout(timer);
   }, [state.toast]);
+
+  useEffect(() => {
+    if (!state.idiomEffect) return undefined;
+
+    const timer = window.setTimeout(() => {
+      setState((prev) => (prev.idiomEffect?.id === state.idiomEffect?.id ? { ...prev, idiomEffect: null } : prev));
+    }, 2600);
+
+    return () => window.clearTimeout(timer);
+  }, [state.idiomEffect]);
 
   useEffect(() => {
     if (!state.isReady) return;
@@ -404,6 +459,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         let streak = prev.stats.streak;
         let mistakes = prev.stats.mistakes;
         let toast: ToastMessage | null = null;
+        let answerEffect: GameState['answerEffect'] = null;
+        let idiomEffect: GameState['idiomEffect'] = null;
+        const currentIdiomBefore =
+          getIdiomForCell(prev.placedIdioms, prev.grid, prev.selectedCell, prev.activeIdiomKey) ??
+          getIdiomForCell(prev.placedIdioms, prev.grid, [row, col], prev.activeIdiomKey);
+        const wasCurrentIdiomSolved = currentIdiomBefore
+          ? isPlacedIdiomSolved(currentIdiomBefore, prev.grid, prev.userGrid, prev.revealed)
+          : false;
 
         if (isCorrect) {
           revealed[row][col] = true;
@@ -419,6 +482,19 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             text: streak >= 3 ? `連擊 ${streak} 次` : '答對了',
             tone: 'success',
           };
+          answerEffect = { id: Date.now(), row, col, kind: 'correct', streak };
+          if (
+            currentIdiomBefore &&
+            !wasCurrentIdiomSolved &&
+            isPlacedIdiomSolved(currentIdiomBefore, prev.grid, userGrid, revealed)
+          ) {
+            idiomEffect = {
+              id: Date.now() + 1,
+              word: currentIdiomBefore.idiom.word,
+              definition: currentIdiomBefore.idiom.definition,
+              streak,
+            };
+          }
         } else {
           streak = 0;
           mistakes += 1;
@@ -428,6 +504,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             text: '這個字不對，再想想',
             tone: 'error',
           };
+          answerEffect = { id: Date.now(), row, col, kind: 'wrong', streak };
         }
 
         const solvedCells = countSolvedCells(prev.grid, userGrid, revealed);
@@ -439,9 +516,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           score += Math.max(20 - prev.stats.hintsUsed * 2, 6);
           toast = { id: Date.now(), text: `第 ${prev.level} 關完成`, tone: 'success' };
         } else {
-          const currentIdiom =
-            getIdiomForCell(prev.placedIdioms, prev.grid, prev.selectedCell, prev.activeIdiomKey) ??
-            getIdiomForCell(prev.placedIdioms, prev.grid, [row, col], prev.activeIdiomKey);
+          const currentIdiom = currentIdiomBefore;
           activeIdiomKey = currentIdiom ? getPlacedIdiomKey(currentIdiom) : prev.activeIdiomKey;
           selectedCell =
             findNextEditableCellInIdiom(
@@ -472,6 +547,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
               solvedCells,
             },
           },
+          answerEffect,
+          idiomEffect,
           toast,
         };
       });

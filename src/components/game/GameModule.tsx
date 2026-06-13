@@ -2,8 +2,10 @@
 
 import React from 'react';
 import { useGame } from '@/context/GameContext';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
+  Award,
+  Flame,
   LoaderCircle,
   Lightbulb,
   RotateCcw,
@@ -61,6 +63,73 @@ function syncStatusCopy(status: 'connecting' | 'synced' | 'syncing' | 'offline')
         className: 'bg-emerald-500',
       };
   }
+}
+
+function getComboCopy(streak: number) {
+  if (streak >= 8) return '筆勢正盛';
+  if (streak >= 5) return '手感穩定';
+  if (streak >= 3) return '連答成勢';
+  if (streak > 0) return '正在暖手';
+  return '從容作答';
+}
+
+function getPerformanceGrade(stats: { mistakes: number; hintsUsed: number; streak: number }) {
+  const performanceScore = Math.max(0, 100 - stats.mistakes * 12 - stats.hintsUsed * 9 + Math.min(stats.streak, 8) * 3);
+
+  if (performanceScore >= 92) {
+    return { letter: 'S', title: '出口成章', description: '幾乎一氣呵成', className: 'text-secondary bg-amber-50 border-amber-200' };
+  }
+
+  if (performanceScore >= 78) {
+    return { letter: 'A', title: '文思穩健', description: '節奏很好', className: 'text-primary bg-sky-50 border-sky-200' };
+  }
+
+  if (performanceScore >= 62) {
+    return { letter: 'B', title: '漸入佳境', description: '穩穩完成', className: 'text-emerald-700 bg-emerald-50 border-emerald-200' };
+  }
+
+  return { letter: 'C', title: '再接再厲', description: '下一關再試手感', className: 'text-accent bg-rose-50 border-rose-200' };
+}
+
+function ComboMeter({ streak, compact = false }: { streak: number; compact?: boolean }) {
+  const reduceMotion = useReducedMotion();
+  const clampedStreak = Math.min(streak, 5);
+  const progress = (clampedStreak / 5) * 100;
+  const isActive = streak >= 3;
+
+  return (
+    <div
+      className={cn(
+        'rounded-[1rem] border border-white/45 bg-white/45 p-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]',
+        compact && 'p-2.5'
+      )}
+      aria-label={`目前連擊 ${streak} 次`}
+    >
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <span className="inline-flex items-center gap-1.5 text-sm font-bold text-foreground/75">
+          <Flame size={16} className={cn(isActive ? 'text-secondary' : 'text-foreground/45')} />
+          連擊火候
+        </span>
+        <span className={cn('text-base font-black', isActive ? 'text-secondary' : 'text-foreground/55')}>
+          {streak}
+        </span>
+      </div>
+      <div className="h-3 overflow-hidden rounded-full bg-white/65">
+        <motion.div
+          className={cn(
+            'h-full rounded-full',
+            isActive ? 'bg-gradient-to-r from-secondary via-amber-500 to-accent' : 'bg-foreground/25'
+          )}
+          initial={false}
+          animate={{ width: `${progress}%` }}
+          transition={reduceMotion ? { duration: 0 } : { duration: 0.26, ease: 'easeOut' }}
+        />
+      </div>
+      <p className={cn('mt-2 font-semibold text-foreground/60', compact ? 'text-xs' : 'text-sm')}>
+        {getComboCopy(streak)}
+      </p>
+    </div>
+  );
 }
 
 function playToneSequence(
@@ -124,10 +193,62 @@ function playErrorTone(context: AudioContext) {
   lowerOscillator.stop(start + 0.34);
 }
 
+function playCorrectTone(context: AudioContext, streak: number) {
+  if (streak >= 8) {
+    playToneSequence(
+      context,
+      [
+        { frequency: 659.25, duration: 0.08, gain: 0.03 },
+        { frequency: 783.99, duration: 0.09, gain: 0.035 },
+        { frequency: 987.77, duration: 0.12, gain: 0.04 },
+        { frequency: 1318.51, duration: 0.18, gain: 0.045 },
+      ],
+      'triangle'
+    );
+    return;
+  }
+
+  if (streak >= 5) {
+    playToneSequence(
+      context,
+      [
+        { frequency: 587.33, duration: 0.08, gain: 0.03 },
+        { frequency: 739.99, duration: 0.1, gain: 0.035 },
+        { frequency: 987.77, duration: 0.16, gain: 0.04 },
+      ],
+      'sine'
+    );
+    return;
+  }
+
+  if (streak >= 3) {
+    playToneSequence(
+      context,
+      [
+        { frequency: 523.25, duration: 0.08, gain: 0.03 },
+        { frequency: 659.25, duration: 0.1, gain: 0.035 },
+        { frequency: 783.99, duration: 0.14, gain: 0.04 },
+      ],
+      'sine'
+    );
+    return;
+  }
+
+  playToneSequence(
+    context,
+    [
+      { frequency: 523.25, duration: 0.09, gain: 0.028 },
+      { frequency: 659.25, duration: 0.12, gain: 0.032 },
+    ],
+    'sine'
+  );
+}
+
 function GameSoundEffects() {
-  const { toast, isComplete } = useGame();
+  const { answerEffect, toast, isComplete } = useGame();
   const audioContextRef = React.useRef<AudioContext | null>(null);
   const lastToastIdRef = React.useRef<number | null>(null);
+  const lastAnswerEffectIdRef = React.useRef<number | null>(null);
   const completedRef = React.useRef(false);
 
   const ensureAudioContext = React.useCallback(async () => {
@@ -164,29 +285,31 @@ function GameSoundEffects() {
   }, [ensureAudioContext]);
 
   React.useEffect(() => {
+    if (!answerEffect || answerEffect.id === lastAnswerEffectIdRef.current) return;
+    lastAnswerEffectIdRef.current = answerEffect.id;
+
+    void ensureAudioContext().then((context) => {
+      if (!context) return;
+
+      if (answerEffect.kind === 'wrong') {
+        playErrorTone(context);
+        return;
+      }
+
+      playCorrectTone(context, answerEffect.streak);
+    });
+  }, [answerEffect, ensureAudioContext]);
+
+  React.useEffect(() => {
     if (!toast || toast.id === lastToastIdRef.current) return;
     lastToastIdRef.current = toast.id;
 
     void ensureAudioContext().then((context) => {
       if (!context) return;
 
-      if (toast.tone === 'error') {
-        playErrorTone(context);
-        return;
-      }
-
-      if (toast.tone === 'success' && !isComplete) {
-        playToneSequence(
-          context,
-          [
-            { frequency: 523.25, duration: 0.09, gain: 0.028 },
-            { frequency: 659.25, duration: 0.12, gain: 0.032 },
-          ],
-          'sine'
-        );
-      }
+      if (toast.tone === 'success' && !isComplete && !answerEffect) playCorrectTone(context, 1);
     });
-  }, [ensureAudioContext, isComplete, toast]);
+  }, [answerEffect, ensureAudioContext, isComplete, toast]);
 
   React.useEffect(() => {
     if (isComplete && !completedRef.current) {
@@ -215,6 +338,42 @@ function GameSoundEffects() {
   return null;
 }
 
+function GameIdiomCompletion() {
+  const { idiomEffect } = useGame();
+  const reduceMotion = useReducedMotion();
+
+  return (
+    <AnimatePresence>
+      {idiomEffect ? (
+        <div className="pointer-events-none fixed inset-x-3 top-[38%] z-40 flex justify-center sm:top-8">
+          <motion.div
+            key={idiomEffect.id}
+            initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 18, scale: 0.96 }}
+            animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -10, scale: 0.98 }}
+            transition={{ duration: 0.28, ease: 'easeOut' }}
+            className="w-full max-w-[34rem] overflow-hidden rounded-[1.5rem] border border-secondary/25 bg-[#fff8e6]/95 px-5 py-4 text-center shadow-[0_18px_40px_rgba(101,123,131,0.22)] backdrop-blur-md sm:px-7 sm:py-5"
+          >
+            <div className="mx-auto mb-3 h-1.5 w-24 rounded-full bg-gradient-to-r from-secondary via-primary to-accent" />
+            <p className="text-sm font-bold text-foreground/55 sm:text-base">成語完成</p>
+            <p className="mt-1 text-[2rem] font-black leading-tight tracking-[0.16em] text-foreground sm:text-[2.5rem]">
+              {idiomEffect.word}
+            </p>
+            <p className="mx-auto mt-2 max-w-[28rem] text-base leading-relaxed text-foreground/75 sm:text-lg">
+              {idiomEffect.definition}
+            </p>
+            {idiomEffect.streak >= 3 ? (
+              <p className="mt-3 inline-flex rounded-full bg-secondary/12 px-4 py-1.5 text-sm font-bold text-secondary">
+                連擊 {idiomEffect.streak} 次
+              </p>
+            ) : null}
+          </motion.div>
+        </div>
+      ) : null}
+    </AnimatePresence>
+  );
+}
+
 export function GameRoot({ children }: { children: React.ReactNode }) {
   const childArray = React.Children.toArray(children);
   const [header, board, dock, overlay] = childArray;
@@ -238,6 +397,7 @@ export function GameRoot({ children }: { children: React.ReactNode }) {
           <div className="game-dock-inner">{dock}</div>
         </div>
         <GameSoundEffects />
+        <GameIdiomCompletion />
         {overlay}
       </div>
     </div>
@@ -320,6 +480,10 @@ export function GameHeader() {
         </div>
       </div>
 
+      <div className="sm:hidden">
+        <ComboMeter streak={stats.streak} compact />
+      </div>
+
       <AnimatePresence>
         {showResetConfirm ? (
           <motion.div
@@ -379,6 +543,10 @@ export function GameHeader() {
             <p className="text-[17px] font-medium text-foreground/60 lg:text-[17px]">提示</p>
             <p className="text-right text-[2.325rem] font-black leading-none text-foreground lg:text-[2.575rem]">{stats.hintsUsed}</p>
           </div>
+        </div>
+
+        <div className="mt-5 lg:mt-4">
+          <ComboMeter streak={stats.streak} />
         </div>
 
         <div className="mt-5 border-t border-white/35 pt-4 lg:mt-4 lg:pt-3.5">
@@ -469,7 +637,19 @@ export function GameHeader() {
 }
 
 export function GameBoard() {
-  const { grid, userGrid, revealed, selectedCell, selectCell, clearCell, highlightedCells, isReady } = useGame();
+  const reduceMotion = useReducedMotion();
+  const {
+    answerEffect,
+    grid,
+    userGrid,
+    revealed,
+    selectedCell,
+    selectCell,
+    clearCell,
+    highlightedCells,
+    isComplete,
+    isReady,
+  } = useGame();
 
   if (!isReady) {
     return <div className={cn(BOARD_FRAME_CLASS, 'glass rounded-[1.5rem] sm:rounded-[2.5rem]')} />;
@@ -499,13 +679,54 @@ export function GameBoard() {
             const guess = userGrid[y][x];
             const isWrong = Boolean(guess) && !isSolved && guess !== cell.char;
             const isHighlightedPath = highlightedCells.some(([row, col]) => row === y && col === x);
+            const isEffectCell = answerEffect?.row === y && answerEffect.col === x;
+            const completeDelay = ((Math.abs(y - 3.5) + Math.abs(x - 3.5)) * 0.045);
+            const animateState =
+              isComplete && isSolved
+                ? {
+                    scale: [1, 1.13, 1],
+                    boxShadow: [
+                      '0 8px 18px rgba(38,139,210,0.18)',
+                      '0 0 0 8px rgba(76,175,80,0.22), 0 14px 28px rgba(38,139,210,0.24)',
+                      '0 8px 18px rgba(38,139,210,0.18)',
+                    ],
+                  }
+                : isEffectCell && answerEffect.kind === 'correct'
+                  ? {
+                      scale: [1, 1.18, 1],
+                      boxShadow: [
+                        '0 8px 18px rgba(38,139,210,0.18)',
+                        '0 0 0 9px rgba(16,185,129,0.30), 0 16px 32px rgba(16,185,129,0.30)',
+                        '0 8px 18px rgba(38,139,210,0.18)',
+                      ],
+                    }
+                  : isEffectCell && answerEffect.kind === 'wrong'
+                    ? {
+                        x: [0, -8, 7, -5, 4, 0],
+                        boxShadow: [
+                          '0 8px 18px rgba(244,63,94,0.20)',
+                          '0 0 0 7px rgba(244,63,94,0.28), 0 14px 28px rgba(244,63,94,0.28)',
+                          '0 8px 18px rgba(244,63,94,0.20)',
+                        ],
+                      }
+                    : undefined;
+            const animateTransition =
+              isComplete && isSolved
+                ? { delay: completeDelay, duration: 0.55, ease: 'easeOut' as const }
+                : isEffectCell && answerEffect?.kind === 'correct'
+                  ? { duration: 0.32, ease: 'easeOut' as const }
+                  : isEffectCell && answerEffect?.kind === 'wrong'
+                    ? { duration: 0.34, ease: 'easeOut' as const }
+                    : undefined;
 
             return (
               <motion.button
                 key={`${y}-${x}`}
                 type="button"
-                whileHover={{ scale: !isSolved ? 1.05 : 1 }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={reduceMotion ? undefined : { scale: !isSolved ? 1.05 : 1 }}
+                whileTap={reduceMotion ? undefined : { scale: 0.95 }}
+                animate={reduceMotion ? undefined : animateState}
+                transition={reduceMotion ? undefined : animateTransition}
                 onClick={() => {
                   if (isWrong) {
                     clearCell(y, x);
@@ -542,6 +763,7 @@ export function GameBoard() {
 
 export function GameDock() {
   const { candidates, fillCell, selectedCell, isReady } = useGame();
+  const reduceMotion = useReducedMotion();
 
   if (!isReady) return null;
 
@@ -558,8 +780,8 @@ export function GameDock() {
             <motion.button
               key={`${char}-${index}`}
               type="button"
-              whileHover={{ y: -4, scale: 1.08 }}
-              whileTap={{ scale: 0.9 }}
+              whileHover={reduceMotion ? undefined : { y: -4, scale: 1.08 }}
+              whileTap={reduceMotion ? undefined : { scale: 0.9 }}
               onClick={() => fillCell(char)}
               disabled={!selectedCell}
               className={cn(
@@ -578,6 +800,8 @@ export function GameDock() {
 
 export function GameOverlay() {
   const { isAdvancing, isComplete, isNextLevelReady, nextLevel, nextLevelStatus, level, stats, isReady } = useGame();
+  const reduceMotion = useReducedMotion();
+  const grade = getPerformanceGrade(stats);
 
   if (!isReady) return null;
 
@@ -590,8 +814,9 @@ export function GameOverlay() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6 backdrop-blur-md"
         >
           <motion.div
-            initial={{ scale: 0.5, y: 100 }}
-            animate={{ scale: 1, y: 0 }}
+            initial={reduceMotion ? { opacity: 1 } : { scale: 0.92, y: 34, opacity: 0 }}
+            animate={reduceMotion ? { opacity: 1 } : { scale: 1, y: 0, opacity: 1 }}
+            transition={{ duration: 0.32, ease: 'easeOut' }}
             className="relative w-full max-w-sm overflow-hidden rounded-[2rem] bg-white p-10 text-center"
           >
             <div className="absolute left-0 top-0 h-2 w-full bg-gradient-to-r from-primary via-accent to-secondary" />
@@ -602,6 +827,16 @@ export function GameOverlay() {
 
             <h2 className="title-gradient text-4xl font-black">過關了</h2>
             <p className="mt-3 text-lg text-foreground/70">第 {level} 關已完成，下一關會更少提示、更高密度。</p>
+
+            <div className={cn('mt-6 rounded-[1.5rem] border px-5 py-4', grade.className)}>
+              <div className="flex items-center justify-center gap-3">
+                <Award size={26} />
+                <span className="text-sm font-black text-foreground/60">本關評級</span>
+              </div>
+              <p className="mt-2 text-6xl font-black leading-none">{grade.letter}</p>
+              <p className="mt-2 text-xl font-black text-foreground">{grade.title}</p>
+              <p className="mt-1 text-sm font-semibold text-foreground/60">{grade.description}</p>
+            </div>
 
             <div className="my-6 grid grid-cols-3 gap-2 text-sm">
               <div className="rounded-2xl bg-slate-100 p-3">
