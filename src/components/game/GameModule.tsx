@@ -338,6 +338,52 @@ function GameSoundEffects() {
   return null;
 }
 
+function GameTileFlight() {
+  const { answerEffect } = useGame();
+  const reduceMotion = useReducedMotion();
+  const flight = answerEffect?.flight;
+
+  if (reduceMotion || !answerEffect || !flight) return null;
+
+  const tileSize = Math.max(40, Math.min(flight.to.size, 88));
+  const startScale = Math.max(0.65, Math.min(flight.from.size / tileSize, 1.15));
+  const startX = flight.from.x - tileSize / 2;
+  const startY = flight.from.y - tileSize / 2;
+  const targetX = flight.to.x - tileSize / 2;
+  const targetY = flight.to.y - tileSize / 2;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        key={answerEffect.id}
+        aria-hidden="true"
+        initial={{ x: startX, y: startY, scale: startScale, opacity: 0.94 }}
+        animate={{
+          x: targetX,
+          y: targetY,
+          scale: 1,
+          opacity: [0.94, 1, 1, 0],
+          rotate: answerEffect.kind === 'correct' ? [0, -2, 0] : [0, 2, -2, 0],
+        }}
+        transition={{
+          duration: 0.52,
+          ease: [0.22, 1, 0.36, 1],
+          opacity: { times: [0, 0.55, 0.82, 1] },
+        }}
+        className={cn(
+          'pointer-events-none fixed left-0 top-0 z-[60] flex items-center justify-center rounded-[1rem] border-2 text-[clamp(1.5rem,3vw,2.6rem)] font-black shadow-[0_14px_30px_rgba(101,123,131,0.28)]',
+          answerEffect.kind === 'correct'
+            ? 'border-white/75 bg-primary text-white'
+            : 'border-rose-200 bg-rose-500 text-white'
+        )}
+        style={{ width: tileSize, height: tileSize }}
+      >
+        {answerEffect.char}
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
 function GameIdiomCompletion() {
   const { idiomEffect } = useGame();
   const reduceMotion = useReducedMotion();
@@ -397,6 +443,7 @@ export function GameRoot({ children }: { children: React.ReactNode }) {
           <div className="game-dock-inner">{dock}</div>
         </div>
         <GameSoundEffects />
+        <GameTileFlight />
         <GameIdiomCompletion />
         {overlay}
       </div>
@@ -636,10 +683,75 @@ export function GameHeader() {
   );
 }
 
+function GameBrushPath({ cells }: { cells: [number, number][] }) {
+  const reduceMotion = useReducedMotion();
+  const firstCell = cells[0];
+  const lastCell = cells[cells.length - 1];
+
+  if (!firstCell || !lastCell) return null;
+
+  const x1 = (firstCell[1] + 0.5) * 12.5;
+  const y1 = (firstCell[0] + 0.5) * 12.5;
+  const x2 = (lastCell[1] + 0.5) * 12.5;
+  const y2 = (lastCell[0] + 0.5) * 12.5;
+  const duration = reduceMotion ? 0 : 0.58;
+
+  return (
+    <motion.svg
+      aria-hidden="true"
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="pointer-events-none absolute inset-0 z-20 h-full w-full overflow-visible mix-blend-multiply"
+    >
+      <motion.line
+        x1={x1}
+        y1={y1}
+        x2={x2}
+        y2={y2}
+        pathLength={1}
+        initial={{ pathLength: reduceMotion ? 1 : 0, opacity: 0 }}
+        animate={{ pathLength: 1, opacity: [0, 0.34, 0.24] }}
+        transition={{ duration, delay: reduceMotion ? 0 : 0.22, ease: [0.22, 1, 0.36, 1] }}
+        stroke="rgba(88, 77, 54, 0.88)"
+        strokeWidth="10"
+        strokeLinecap="round"
+        vectorEffect="non-scaling-stroke"
+      />
+      <motion.line
+        x1={x1}
+        y1={y1}
+        x2={x2}
+        y2={y2}
+        pathLength={1}
+        initial={{ pathLength: reduceMotion ? 1 : 0, opacity: 0 }}
+        animate={{ pathLength: 1, opacity: [0, 0.72, 0.48] }}
+        transition={{ duration, delay: reduceMotion ? 0 : 0.3, ease: [0.22, 1, 0.36, 1] }}
+        stroke="rgba(181, 137, 0, 0.92)"
+        strokeWidth="3"
+        strokeLinecap="round"
+        vectorEffect="non-scaling-stroke"
+      />
+      <motion.circle
+        cx={x2}
+        cy={y2}
+        r="1.4"
+        initial={{ scale: reduceMotion ? 1 : 0.3, opacity: 0 }}
+        animate={{ scale: 1, opacity: 0.7 }}
+        transition={{ duration: reduceMotion ? 0 : 0.24, delay: reduceMotion ? 0 : 0.78 }}
+        fill="rgba(181, 137, 0, 0.92)"
+      />
+    </motion.svg>
+  );
+}
+
 export function GameBoard() {
   const reduceMotion = useReducedMotion();
   const {
     answerEffect,
+    idiomEffect,
     grid,
     userGrid,
     revealed,
@@ -662,100 +774,136 @@ export function GameBoard() {
         'rounded-[1.5rem] border border-white/50 bg-grid-bg/55 p-[clamp(0.5rem,1.2vw,2rem)] shadow-xl backdrop-blur-sm sm:rounded-[2.5rem]'
       )}
     >
-      <div className="grid h-full w-full grid-cols-8 grid-rows-8 gap-[clamp(0.18rem,0.55vw,1rem)]">
-        {grid.map((row, y) =>
-          row.map((cell, x) => {
-            if (!cell) {
-              return (
-                <div
-                  key={`${y}-${x}`}
-                  className="h-full w-full"
-                />
-              );
-            }
+      <div className="relative h-full w-full">
+        <div className="grid h-full w-full grid-cols-8 grid-rows-8 gap-[clamp(0.18rem,0.55vw,1rem)]">
+          {grid.map((row, y) =>
+            row.map((cell, x) => {
+              if (!cell) {
+                return (
+                  <div
+                    key={`${y}-${x}`}
+                    className="h-full w-full"
+                  />
+                );
+              }
 
-            const isSelected = selectedCell?.[0] === y && selectedCell?.[1] === x;
-            const isSolved = revealed[y][x];
-            const guess = userGrid[y][x];
-            const isWrong = Boolean(guess) && !isSolved && guess !== cell.char;
-            const isHighlightedPath = highlightedCells.some(([row, col]) => row === y && col === x);
-            const isEffectCell = answerEffect?.row === y && answerEffect.col === x;
-            const completeDelay = ((Math.abs(y - 3.5) + Math.abs(x - 3.5)) * 0.045);
-            const animateState =
-              isComplete && isSolved
-                ? {
-                    scale: [1, 1.13, 1],
-                    boxShadow: [
-                      '0 8px 18px rgba(38,139,210,0.18)',
-                      '0 0 0 8px rgba(76,175,80,0.22), 0 14px 28px rgba(38,139,210,0.24)',
-                      '0 8px 18px rgba(38,139,210,0.18)',
-                    ],
-                  }
-                : isEffectCell && answerEffect.kind === 'correct'
+              const isSelected = selectedCell?.[0] === y && selectedCell?.[1] === x;
+              const isSolved = revealed[y][x];
+              const guess = userGrid[y][x];
+              const isWrong = Boolean(guess) && !isSolved && guess !== cell.char;
+              const isHighlightedPath = highlightedCells.some(([row, col]) => row === y && col === x);
+              const isEffectCell = answerEffect?.row === y && answerEffect.col === x;
+              const completeDelay = ((Math.abs(y - 3.5) + Math.abs(x - 3.5)) * 0.045);
+              const animateState =
+                isComplete && isSolved
                   ? {
-                      scale: [1, 1.18, 1],
+                      scale: [1, 1.13, 1],
                       boxShadow: [
                         '0 8px 18px rgba(38,139,210,0.18)',
-                        '0 0 0 9px rgba(16,185,129,0.30), 0 16px 32px rgba(16,185,129,0.30)',
+                        '0 0 0 8px rgba(76,175,80,0.22), 0 14px 28px rgba(38,139,210,0.24)',
                         '0 8px 18px rgba(38,139,210,0.18)',
                       ],
                     }
-                  : isEffectCell && answerEffect.kind === 'wrong'
+                  : isEffectCell && answerEffect.kind === 'correct'
                     ? {
-                        x: [0, -8, 7, -5, 4, 0],
+                        scale: [1, 1.18, 1],
                         boxShadow: [
-                          '0 8px 18px rgba(244,63,94,0.20)',
-                          '0 0 0 7px rgba(244,63,94,0.28), 0 14px 28px rgba(244,63,94,0.28)',
-                          '0 8px 18px rgba(244,63,94,0.20)',
+                          '0 8px 18px rgba(38,139,210,0.18)',
+                          '0 0 0 9px rgba(16,185,129,0.30), 0 16px 32px rgba(16,185,129,0.30)',
+                          '0 8px 18px rgba(38,139,210,0.18)',
                         ],
                       }
-                    : undefined;
-            const animateTransition =
-              isComplete && isSolved
-                ? { delay: completeDelay, duration: 0.55, ease: 'easeOut' as const }
-                : isEffectCell && answerEffect?.kind === 'correct'
-                  ? { duration: 0.32, ease: 'easeOut' as const }
-                  : isEffectCell && answerEffect?.kind === 'wrong'
-                    ? { duration: 0.34, ease: 'easeOut' as const }
-                    : undefined;
+                    : isEffectCell && answerEffect.kind === 'wrong'
+                      ? {
+                          x: [0, -8, 7, -5, 4, 0],
+                          boxShadow: [
+                            '0 8px 18px rgba(244,63,94,0.20)',
+                            '0 0 0 7px rgba(244,63,94,0.28), 0 14px 28px rgba(244,63,94,0.28)',
+                            '0 8px 18px rgba(244,63,94,0.20)',
+                          ],
+                        }
+                      : undefined;
+              const animateTransition =
+                isComplete && isSolved
+                  ? { delay: completeDelay, duration: 0.55, ease: 'easeOut' as const }
+                  : isEffectCell && answerEffect?.kind === 'correct'
+                    ? { duration: 0.32, ease: 'easeOut' as const }
+                    : isEffectCell && answerEffect?.kind === 'wrong'
+                      ? { duration: 0.34, ease: 'easeOut' as const }
+                      : undefined;
+              const delayCellContent = Boolean(isEffectCell && answerEffect?.flight && !reduceMotion);
 
-            return (
-              <motion.button
-                key={`${y}-${x}`}
-                type="button"
-                whileHover={reduceMotion ? undefined : { scale: !isSolved ? 1.05 : 1 }}
-                whileTap={reduceMotion ? undefined : { scale: 0.95 }}
-                animate={reduceMotion ? undefined : animateState}
-                transition={reduceMotion ? undefined : animateTransition}
-                onClick={() => {
-                  if (isWrong) {
-                    clearCell(y, x);
-                    return;
-                  }
+              return (
+                <motion.button
+                  key={`${y}-${x}`}
+                  type="button"
+                  data-game-cell={`${y}-${x}`}
+                  whileHover={reduceMotion ? undefined : { scale: !isSolved ? 1.05 : 1 }}
+                  whileTap={reduceMotion ? undefined : { scale: 0.95 }}
+                  animate={reduceMotion ? undefined : animateState}
+                  transition={reduceMotion ? undefined : animateTransition}
+                  onClick={() => {
+                    if (isWrong) {
+                      clearCell(y, x);
+                      return;
+                    }
 
-                  selectCell(y, x);
-                }}
-                className={cn(
-                  'cell-shadow relative flex h-full w-full items-center justify-center rounded-[clamp(0.8rem,1.5vw,1.35rem)] text-[clamp(1rem,4.2vw,2.7rem)] font-bold transition-all duration-200',
-                  isSelected && 'z-10 ring-2 ring-primary/90 ring-offset-2 ring-offset-[#f5eed1] shadow-[0_0_0_5px_rgba(38,139,210,0.18),0_10px_18px_rgba(38,139,210,0.18)] sm:ring-4 sm:ring-offset-4 sm:shadow-[0_0_0_6px_rgba(38,139,210,0.18),0_18px_30px_rgba(38,139,210,0.18)]',
-                  isHighlightedPath && !isSelected && 'bg-sky-100 text-primary shadow-[0_6px_16px_rgba(38,139,210,0.12)] sm:shadow-[0_10px_24px_rgba(38,139,210,0.12)]',
-                  isSolved && 'bg-primary text-white',
-                  !isSolved && !isHighlightedPath && 'cursor-pointer bg-white text-primary',
-                  !isSolved && !guess && 'bg-secondary/20',
-                  isWrong && 'bg-rose-500 text-white'
-                )}
-              >
-                {isSelected && !isSolved ? (
-                  <span className="pointer-events-none absolute inset-0.5 rounded-[0.62rem] border border-primary/35 bg-sky-100/85 sm:inset-1 sm:rounded-[1.05rem] sm:border-2" />
-                ) : null}
-                {isSelected && !isSolved ? (
-                  <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border border-white bg-primary shadow-md sm:-right-1.5 sm:-top-1.5 sm:h-4.5 sm:w-4.5 sm:border-2" />
-                ) : null}
-                {isSolved ? cell.char : guess}
-              </motion.button>
-            );
-          })
-        )}
+                    selectCell(y, x);
+                  }}
+                  className={cn(
+                    'cell-shadow relative flex h-full w-full items-center justify-center rounded-[clamp(0.8rem,1.5vw,1.35rem)] text-[clamp(1rem,4.2vw,2.7rem)] font-bold transition-all duration-200',
+                    isSelected && 'z-10 ring-2 ring-primary/90 ring-offset-2 ring-offset-[#f5eed1] shadow-[0_0_0_5px_rgba(38,139,210,0.18),0_10px_18px_rgba(38,139,210,0.18)] sm:ring-4 sm:ring-offset-4 sm:shadow-[0_0_0_6px_rgba(38,139,210,0.18),0_18px_30px_rgba(38,139,210,0.18)]',
+                    isHighlightedPath && !isSelected && 'bg-sky-100 text-primary shadow-[0_6px_16px_rgba(38,139,210,0.12)] sm:shadow-[0_10px_24px_rgba(38,139,210,0.12)]',
+                    isSolved && 'bg-primary text-white',
+                    !isSolved && !isHighlightedPath && 'cursor-pointer bg-white text-primary',
+                    !isSolved && !guess && 'bg-secondary/20',
+                    isWrong && 'bg-rose-500 text-white'
+                  )}
+                >
+                  {isEffectCell && answerEffect.kind === 'correct' && answerEffect.isIntersection && !reduceMotion ? (
+                    <span className="pointer-events-none absolute inset-0 z-20" aria-hidden="true">
+                      {[0, 1].map((ring) => (
+                        <motion.span
+                          key={`${answerEffect.id}-${ring}`}
+                          className="absolute inset-1 rounded-full border-2 border-secondary/70"
+                          initial={{ scale: 0.5, opacity: 0 }}
+                          animate={{ scale: [0.5, 1.2, 1.9], opacity: [0, 0.66, 0] }}
+                          transition={{
+                            duration: 0.72,
+                            delay: 0.2 + ring * 0.12,
+                            ease: [0.22, 1, 0.36, 1],
+                          }}
+                        />
+                      ))}
+                    </span>
+                  ) : null}
+                  {isSelected && !isSolved ? (
+                    <span className="pointer-events-none absolute inset-0.5 rounded-[0.62rem] border border-primary/35 bg-sky-100/85 sm:inset-1 sm:rounded-[1.05rem] sm:border-2" />
+                  ) : null}
+                  {isSelected && !isSolved ? (
+                    <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border border-white bg-primary shadow-md sm:-right-1.5 sm:-top-1.5 sm:h-4.5 sm:w-4.5 sm:border-2" />
+                  ) : null}
+                  <motion.span
+                    key={isEffectCell ? answerEffect.id : `${y}-${x}-${isSolved ? 'solved' : guess}`}
+                    className="relative z-10"
+                    initial={delayCellContent ? { opacity: 0, scale: 0.72 } : false}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{
+                      duration: reduceMotion ? 0 : 0.2,
+                      delay: delayCellContent ? 0.34 : 0,
+                      ease: 'easeOut',
+                    }}
+                  >
+                    {isSolved ? cell.char : guess}
+                  </motion.span>
+                </motion.button>
+              );
+            })
+          )}
+        </div>
+        <AnimatePresence>
+          {idiomEffect ? <GameBrushPath key={idiomEffect.id} cells={idiomEffect.cells} /> : null}
+        </AnimatePresence>
       </div>
     </div>
   );
@@ -782,7 +930,34 @@ export function GameDock() {
               type="button"
               whileHover={reduceMotion ? undefined : { y: -4, scale: 1.08 }}
               whileTap={reduceMotion ? undefined : { scale: 0.9 }}
-              onClick={() => fillCell(char)}
+              onClick={(event) => {
+                if (!selectedCell || reduceMotion) {
+                  fillCell(char);
+                  return;
+                }
+
+                const [row, col] = selectedCell;
+                const target = document.querySelector<HTMLElement>(`[data-game-cell="${row}-${col}"]`);
+                if (!target) {
+                  fillCell(char);
+                  return;
+                }
+
+                const sourceRect = event.currentTarget.getBoundingClientRect();
+                const targetRect = target.getBoundingClientRect();
+                fillCell(char, {
+                  from: {
+                    x: sourceRect.left + sourceRect.width / 2,
+                    y: sourceRect.top + sourceRect.height / 2,
+                    size: Math.min(sourceRect.width, sourceRect.height),
+                  },
+                  to: {
+                    x: targetRect.left + targetRect.width / 2,
+                    y: targetRect.top + targetRect.height / 2,
+                    size: Math.min(targetRect.width, targetRect.height),
+                  },
+                });
+              }}
               disabled={!selectedCell}
               className={cn(
                 'min-h-10 w-full rounded-[0.85rem] border-b-3 border-primary/20 bg-white px-1 text-[1.5rem] font-bold text-primary shadow-md transition-all hover:shadow-lg sm:h-16 sm:rounded-2xl sm:border-b-4 sm:text-3xl',

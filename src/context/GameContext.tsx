@@ -16,6 +16,11 @@ import {
   type ToastMessage,
 } from '@/lib/game-shared';
 
+interface TileFlightGeometry {
+  from: { x: number; y: number; size: number };
+  to: { x: number; y: number; size: number };
+}
+
 interface GameState extends SharedGameState {
   toast: ToastMessage | null;
   isReady: boolean;
@@ -25,14 +30,18 @@ interface GameState extends SharedGameState {
     id: number;
     row: number;
     col: number;
+    char: string;
     kind: 'correct' | 'wrong';
     streak: number;
+    isIntersection: boolean;
+    flight?: TileFlightGeometry;
   } | null;
   idiomEffect: {
     id: number;
     word: string;
     definition: string;
     streak: number;
+    cells: [number, number][];
   } | null;
   nextLevelStatus: 'idle' | 'loading' | 'ready' | 'error';
   syncVersion: number;
@@ -55,7 +64,7 @@ interface GameContextType extends GameState {
   isNextLevelReady: boolean;
   selectCell: (row: number, col: number) => void;
   clearCell: (row: number, col: number) => void;
-  fillCell: (char: string) => void;
+  fillCell: (char: string, flight?: TileFlightGeometry) => void;
   useHint: () => void;
   nextLevel: () => void;
   resetLevel: () => void;
@@ -144,6 +153,19 @@ function isPlacedIdiomSolved(
     const cell = grid[row]?.[col];
     return Boolean(cell && (revealed[row][col] || userGrid[row][col] === cell.char));
   });
+}
+
+function isIntersectionCell(placedIdioms: PlacedIdiom[], row: number, col: number) {
+  let matches = 0;
+
+  for (const placed of placedIdioms) {
+    if (getIdiomCells(placed).some(([cellRow, cellCol]) => cellRow === row && cellCol === col)) {
+      matches += 1;
+      if (matches > 1) return true;
+    }
+  }
+
+  return false;
 }
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
@@ -329,6 +351,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, [state.toast]);
 
   useEffect(() => {
+    if (!state.answerEffect) return undefined;
+
+    const timer = window.setTimeout(() => {
+      setState((prev) => (prev.answerEffect?.id === state.answerEffect?.id ? { ...prev, answerEffect: null } : prev));
+    }, 900);
+
+    return () => window.clearTimeout(timer);
+  }, [state.answerEffect]);
+
+  useEffect(() => {
     if (!state.idiomEffect) return undefined;
 
     const timer = window.setTimeout(() => {
@@ -439,7 +471,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   );
 
   const fillCell = useCallback(
-    (char: string) => {
+    (char: string, flight?: TileFlightGeometry) => {
       applyLocalUpdate((prev) => {
         if (!prev.selectedCell || prev.isComplete) return null;
 
@@ -467,6 +499,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         const wasCurrentIdiomSolved = currentIdiomBefore
           ? isPlacedIdiomSolved(currentIdiomBefore, prev.grid, prev.userGrid, prev.revealed)
           : false;
+        const effectId = Date.now();
+        const intersection = isIntersectionCell(prev.placedIdioms, row, col);
 
         if (isCorrect) {
           revealed[row][col] = true;
@@ -482,17 +516,27 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             text: streak >= 3 ? `連擊 ${streak} 次` : '答對了',
             tone: 'success',
           };
-          answerEffect = { id: Date.now(), row, col, kind: 'correct', streak };
+          answerEffect = {
+            id: effectId,
+            row,
+            col,
+            char,
+            kind: 'correct',
+            streak,
+            isIntersection: intersection,
+            flight,
+          };
           if (
             currentIdiomBefore &&
             !wasCurrentIdiomSolved &&
             isPlacedIdiomSolved(currentIdiomBefore, prev.grid, userGrid, revealed)
           ) {
             idiomEffect = {
-              id: Date.now() + 1,
+              id: effectId + 1,
               word: currentIdiomBefore.idiom.word,
               definition: currentIdiomBefore.idiom.definition,
               streak,
+              cells: getIdiomCells(currentIdiomBefore),
             };
           }
         } else {
@@ -504,7 +548,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             text: '這個字不對，再想想',
             tone: 'error',
           };
-          answerEffect = { id: Date.now(), row, col, kind: 'wrong', streak };
+          answerEffect = {
+            id: effectId,
+            row,
+            col,
+            char,
+            kind: 'wrong',
+            streak,
+            isIntersection: false,
+            flight,
+          };
         }
 
         const solvedCells = countSolvedCells(prev.grid, userGrid, revealed);
