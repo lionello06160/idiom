@@ -83,7 +83,14 @@ body > * {
   min-height: 0;
   width: 100%;
   gap: 0.5rem;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) clamp(8.5rem, 24dvh, 12.5rem);
+}
+
+.game-root {
+  padding-top: max(0.5rem, env(safe-area-inset-top));
+  padding-right: max(0.5rem, env(safe-area-inset-right));
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  padding-left: max(0.5rem, env(safe-area-inset-left));
 }
 
 .game-header-slot,
@@ -93,18 +100,62 @@ body > * {
 }
 
 .game-board-slot {
+  container-type: size;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+.game-board-frame {
+  height: min(100cqw, 100cqh);
+  width: min(100cqw, 100cqh);
+}
+
+.game-dock-slot {
+  display: flex;
+  overflow: hidden;
+}
+
 .game-dock-inner {
+  flex: 1 1 auto;
+  height: 100%;
   min-height: 0;
 }
 
-@media (max-width: 1023px) and (orientation: landscape) {
+.game-candidate-panel {
+  scrollbar-color: rgba(38, 139, 210, 0.45) transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.game-candidate-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+@media (min-width: 380px) {
+  .game-candidate-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 640px) {
+  .game-root {
+    padding-top: max(1rem, env(safe-area-inset-top));
+    padding-right: max(1rem, env(safe-area-inset-right));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    padding-left: max(1rem, env(safe-area-inset-left));
+  }
+}
+
+@media (max-width: 1279px) and (orientation: landscape) {
+  .game-root {
+    padding-top: max(0.5rem, env(safe-area-inset-top));
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+
   .game-shell {
-    grid-template-columns: minmax(0, 1fr) 15rem;
+    grid-template-columns: minmax(0, 1fr) clamp(14rem, 38vw, 18rem);
     grid-template-rows: auto minmax(0, 1fr);
     gap: 0.75rem;
   }
@@ -123,18 +174,22 @@ body > * {
   .game-dock-slot {
     grid-column: 2;
     grid-row: 2;
-    display: flex;
     min-height: 0;
-    overflow: hidden;
   }
 
-  .game-dock-inner {
-    flex: 1 1 auto;
-    min-height: 0;
+  .game-candidate-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
+  .game-root {
+    padding-top: max(1.25rem, env(safe-area-inset-top));
+    padding-right: max(1.25rem, env(safe-area-inset-right));
+    padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+    padding-left: max(1.25rem, env(safe-area-inset-left));
+  }
+
   .game-shell {
     grid-template-columns: minmax(0, 1fr) minmax(0, calc(100dvh - 2rem)) minmax(0, 1fr);
     grid-template-rows: 1fr;
@@ -147,14 +202,12 @@ body > * {
   }
 
   .game-dock-slot {
-    display: flex;
     width: 240px;
     justify-self: start;
-    overflow: hidden;
   }
 
-  .game-dock-inner {
-    flex: 1 1 auto;
+  .game-candidate-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
@@ -167,5 +220,10 @@ body > * {
   .game-header-slot,
   .game-dock-slot {
     width: 260px;
+  }
+
+  .game-root {
+    padding-right: max(1.5rem, env(safe-area-inset-right));
+    padding-left: max(1.5rem, env(safe-area-inset-left));
   }
 }

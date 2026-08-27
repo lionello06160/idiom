@@ -23,10 +23,7 @@ function cn(...inputs: ClassValue[]) {
 }
 
 const BOARD_FRAME_CLASS = cn(
-  'aspect-square max-h-full w-[min(100%,calc(100dvh-19rem))]',
-  'sm:w-[min(100%,calc(100dvh-24rem))]',
-  'lg:w-[min(100%,calc(100dvh-2rem))]',
-  'xl:w-[min(100%,calc(100dvh-2.5rem))]'
+  'game-board-frame aspect-square'
 );
 
 function toneClassName(tone: 'success' | 'warning' | 'error') {
@@ -425,7 +422,7 @@ export function GameRoot({ children }: { children: React.ReactNode }) {
   const [header, board, dock, overlay] = childArray;
 
   return (
-    <div className="relative flex h-full w-full flex-col overflow-hidden px-2 py-2 sm:px-4 sm:py-4 lg:px-5 lg:py-5 xl:px-6">
+    <div className="game-root relative flex h-full w-full flex-col overflow-hidden">
       <div className="animate-float absolute left-[-10%] top-[-10%] hidden h-64 w-64 rounded-full bg-secondary/10 blur-3xl lg:block" />
       <div
         className="absolute bottom-[-10%] right-[-10%] hidden h-64 w-64 rounded-full bg-accent/10 blur-3xl lg:block"
@@ -480,8 +477,8 @@ export function GameHeader() {
   }
 
   return (
-    <div className="relative space-y-2 text-center sm:space-y-4 lg:space-y-5">
-      <div className="hidden items-start justify-between gap-3 sm:flex">
+    <div className="relative space-y-2 text-center xl:space-y-5">
+      <div className="hidden items-start justify-between gap-3 xl:flex">
         <div className="text-left">
           <p className="hidden text-[11px] font-semibold uppercase tracking-[0.24em] text-foreground/50 sm:text-sm sm:tracking-[0.3em] lg:block">Idiom Grid</p>
           <div className="mt-0.5 flex items-center gap-2 sm:mt-1 sm:gap-3">
@@ -517,7 +514,55 @@ export function GameHeader() {
         </div>
       </div>
 
-      <div className="glass rounded-[1.25rem] p-3 text-left sm:hidden">
+      <div className="flex items-center justify-between gap-3 xl:hidden">
+        <div className="min-w-0 text-left">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground/50">成語填填看</p>
+          <div className="mt-0.5 flex items-center gap-2">
+            <h1 className="title-gradient truncate text-xl font-black">第 {level} 關</h1>
+            <span
+              aria-label={syncCopy.label}
+              title={syncCopy.label}
+              className={cn(
+                'inline-block h-2.5 w-2.5 shrink-0 rounded-full shadow-[0_0_0_3px_rgba(255,255,255,0.45)]',
+                syncCopy.className
+              )}
+            />
+          </div>
+        </div>
+
+        <div className="flex shrink-0 gap-2">
+          <button
+            type="button"
+            onClick={useHint}
+            className="glass flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-full p-2.5 transition-colors hover:bg-white/40"
+            aria-label="使用提示"
+          >
+            <Lightbulb size={20} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowResetConfirm((prev) => !prev)}
+            className="glass flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-full p-2.5 transition-colors hover:bg-white/40"
+            aria-label="重新開始本關"
+          >
+            <RotateCcw size={20} />
+          </button>
+        </div>
+      </div>
+
+      <div className="glass rounded-[1.25rem] p-2.5 text-left sm:p-3 xl:hidden">
+        <div className="mb-1.5 flex items-center justify-between gap-3 text-[13px] font-bold sm:text-sm">
+          <span className="text-primary">分數 {stats.score}</span>
+          <span className="text-secondary">連擊 {stats.streak}</span>
+          <span className="text-foreground/65">進度 {progressPercent}%</span>
+        </div>
+        <div className="mb-1.5 h-1.5 overflow-hidden rounded-full bg-white/60 sm:h-2">
+          <motion.div
+            className="h-full rounded-full bg-gradient-to-r from-primary via-secondary to-accent"
+            initial={false}
+            animate={{ width: `${progressPercent}%` }}
+          />
+        </div>
         <div>
           <p className="text-[1rem] leading-snug text-foreground/80">
             {currentIdiom
@@ -525,10 +570,6 @@ export function GameHeader() {
               : '點格子後從下方選字。答對會自動推進，答錯會扣分，卡關時可以使用提示。'}
           </p>
         </div>
-      </div>
-
-      <div className="sm:hidden">
-        <ComboMeter streak={stats.streak} compact />
       </div>
 
       <AnimatePresence>
@@ -572,7 +613,7 @@ export function GameHeader() {
         ) : null}
       </AnimatePresence>
 
-      <div className="hidden glass text-left sm:block sm:rounded-[1.75rem] sm:p-5 lg:p-5">
+      <div className="hidden glass text-left xl:block xl:rounded-[1.75rem] xl:p-5">
         <div className="space-y-3 lg:space-y-2.5">
           <div className="flex items-baseline justify-between gap-3">
             <p className="text-[15px] font-medium text-foreground/60 lg:text-[15px]">分數</p>
@@ -613,7 +654,7 @@ export function GameHeader() {
         </div>
       </div>
 
-      <div className="hidden glass min-h-[82px] rounded-[1.25rem] p-3 sm:block sm:min-h-[170px] sm:rounded-[1.75rem] sm:p-6 lg:min-h-[180px] lg:p-6">
+      <div className="hidden glass min-h-[180px] rounded-[1.75rem] p-6 xl:block">
         <AnimatePresence mode="wait">
           {currentIdiom ? (
             <motion.div
@@ -649,7 +690,7 @@ export function GameHeader() {
         </AnimatePresence>
       </div>
 
-      <div className="hidden items-center justify-between rounded-[1rem] bg-white/45 px-4 py-3 text-sm font-semibold text-foreground/70 sm:flex">
+      <div className="hidden items-center justify-between rounded-[1rem] bg-white/45 px-4 py-3 text-sm font-semibold text-foreground/70 xl:flex">
         <span>下一關</span>
         <span className={cn(
           'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold',
@@ -916,14 +957,16 @@ export function GameDock() {
   if (!isReady) return null;
 
   return (
-    <div className="w-full space-y-2 overflow-hidden sm:space-y-4 lg:flex lg:h-full lg:min-h-0 lg:flex-col">
-      <div className="flex items-center justify-between text-[11px] font-semibold text-foreground/70 sm:text-sm">
-        <span>選字池</span>
-        <span className="text-[10px] text-foreground/55 sm:text-xs">點錯字可直接點格子清空</span>
+    <div className="flex h-full min-h-0 w-full flex-col gap-2 overflow-hidden xl:gap-4">
+      <div className="flex shrink-0 items-center justify-between gap-3 text-sm font-semibold text-foreground/70">
+        <span className="shrink-0">選字池</span>
+        <span className="truncate text-right text-xs text-foreground/60">
+          上下滑動查看全部 {candidates.length} 個字
+        </span>
       </div>
 
-      <div className="glass rounded-[1.25rem] p-2 sm:rounded-[1.75rem] sm:p-5 lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:p-4">
-        <div className="grid grid-cols-7 content-start gap-1.5 sm:grid-cols-4 sm:gap-3">
+      <div className="game-candidate-panel glass min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-[1.25rem] p-2 xl:rounded-[1.75rem] xl:p-4">
+        <div className="game-candidate-grid grid content-start gap-1.5 xl:gap-3">
           {candidates.map((char, index) => (
             <motion.button
               key={`${char}-${index}`}
@@ -960,7 +1003,7 @@ export function GameDock() {
               }}
               disabled={!selectedCell}
               className={cn(
-                'min-h-10 w-full rounded-[0.85rem] border-b-3 border-primary/20 bg-white px-1 text-[1.5rem] font-bold text-primary shadow-md transition-all hover:shadow-lg sm:h-16 sm:rounded-2xl sm:border-b-4 sm:text-3xl',
+                'min-h-12 w-full touch-manipulation rounded-[0.85rem] border-b-3 border-primary/20 bg-white px-1 text-[1.5rem] font-bold text-primary shadow-md transition-all hover:shadow-lg xl:h-16 xl:rounded-2xl xl:border-b-4 xl:text-3xl',
                 !selectedCell && 'cursor-not-allowed grayscale opacity-50'
               )}
             >
@@ -986,13 +1029,13 @@ export function GameOverlay() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6 backdrop-blur-md"
+          className="fixed inset-0 z-50 flex overflow-y-auto bg-black/60 p-3 backdrop-blur-md sm:items-center sm:justify-center sm:p-6"
         >
           <motion.div
             initial={reduceMotion ? { opacity: 1 } : { scale: 0.92, y: 34, opacity: 0 }}
             animate={reduceMotion ? { opacity: 1 } : { scale: 1, y: 0, opacity: 1 }}
             transition={{ duration: 0.32, ease: 'easeOut' }}
-            className="relative w-full max-w-sm overflow-hidden rounded-[2rem] bg-white p-10 text-center"
+            className="relative my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-sm overflow-y-auto rounded-[1.5rem] bg-white p-5 text-center sm:max-h-[calc(100dvh-3rem)] sm:rounded-[2rem] sm:p-10"
           >
             <div className="absolute left-0 top-0 h-2 w-full bg-gradient-to-r from-primary via-accent to-secondary" />
 
