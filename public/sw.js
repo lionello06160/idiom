@@ -1,5 +1,5 @@
 const CACHE_NAME = "idiom-pwa-v1";
-const OFFLINE_URL = "/offline.html";
+const OFFLINE_URL = "/offline";
 const PRECACHE_URLS = [
   OFFLINE_URL,
   "/icons/icon-192.png",
