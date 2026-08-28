@@ -1,4 +1,4 @@
-import { generateServerState, getServerSnapshot, resetServerState, setServerState } from '@/lib/game-server-store';
+import { generateServerState, getServerSnapshot, resetServerState, setServerState } from 'idiom-game-store';
 import { isValidSharedState } from '@/lib/game-shared';
 
 export const dynamic = 'force-dynamic';
@@ -8,7 +8,7 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
-  const body = await request.json().catch(() => null);
+  const body = (await request.json().catch(() => null)) as { state?: unknown } | null;
   const candidate = body?.state;
 
   if (!isValidSharedState(candidate)) {
@@ -20,7 +20,11 @@ export async function PUT(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const body = await request.json().catch(() => null);
+  const body = (await request.json().catch(() => null)) as {
+    action?: unknown;
+    level?: unknown;
+    previousScore?: unknown;
+  } | null;
   const action = body?.action;
   const level = typeof body?.level === 'number' ? body.level : 1;
   const previousScore = typeof body?.previousScore === 'number' ? body.previousScore : 0;

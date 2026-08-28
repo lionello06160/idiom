@@ -298,38 +298,41 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!state.isReady) return undefined;
 
-    const stream = new EventSource('/api/game-stream');
+    let active = true;
+    let polling = false;
 
-    stream.onopen = () => {
-      setState((prev) => ({ ...prev, syncStatus: syncingRef.current ? 'syncing' : 'synced' }));
-    };
+    const pullLatestState = async () => {
+      if (!active || polling || syncingRef.current) return;
+      polling = true;
 
-    stream.onerror = () => {
-      setState((prev) => ({ ...prev, syncStatus: 'offline' }));
-    };
+      try {
+        const snapshot = await fetchServerSnapshot();
+        if (!active || snapshot.version <= syncVersionRef.current) return;
 
-    stream.addEventListener('update', async (event) => {
-      const { version } = JSON.parse((event as MessageEvent).data) as { version: number };
-      if (version <= syncVersionRef.current) return;
-
-      const snapshot = await fetchServerSnapshot().catch(() => null);
-      if (!snapshot) return;
-      if (snapshot.version <= syncVersionRef.current) return;
-
-      syncVersionRef.current = snapshot.version;
-      setState((prev) =>
-        ({
+        syncVersionRef.current = snapshot.version;
+        setState((prev) => ({
           ...withToast(
             snapshot.state,
             snapshot.version,
-            prev.toast ?? { id: Date.now(), text: '其他裝置已更新棋盤', tone: 'warning' }
+            prev.toast ?? { id: Date.now(), text: '其他裝置已更新棋盤', tone: 'warning' },
           ),
           syncStatus: 'synced',
-        })
-      );
-    });
+        }));
+      } catch {
+        if (active) setState((prev) => ({ ...prev, syncStatus: 'offline' }));
+      } finally {
+        polling = false;
+      }
+    };
 
-    return () => stream.close();
+    const timer = window.setInterval(() => {
+      void pullLatestState();
+    }, 2500);
+
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
   }, [state.isReady]);
 
   useEffect(() => {

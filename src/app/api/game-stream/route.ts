@@ -1,12 +1,13 @@
-import { subscribeToServerState } from '@/lib/game-server-store';
+import { getServerSnapshot } from 'idiom-game-store';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   const encoder = new TextEncoder();
-  let unsubscribe: (() => void) | null = null;
   let keepAlive: ReturnType<typeof setInterval> | null = null;
   let closed = false;
+  let polling = false;
+  let lastVersion = 0;
   let controllerRef: ReadableStreamDefaultController<Uint8Array> | null = null;
 
   const cleanup = () => {
@@ -16,11 +17,6 @@ export async function GET(request: Request) {
     if (keepAlive) {
       clearInterval(keepAlive);
       keepAlive = null;
-    }
-
-    if (unsubscribe) {
-      unsubscribe();
-      unsubscribe = null;
     }
 
     if (controllerRef) {
@@ -50,13 +46,25 @@ export async function GET(request: Request) {
       controllerRef = controller;
       enqueue('retry: 1000\n\n');
 
-      unsubscribe = subscribeToServerState((version) => {
-        enqueue(`event: update\ndata: ${JSON.stringify({ version })}\n\n`);
-      });
-
       keepAlive = setInterval(() => {
-        enqueue(': keepalive\n\n');
-      }, 15000);
+        if (polling) return;
+        polling = true;
+
+        void getServerSnapshot()
+          .then((snapshot) => {
+            if (snapshot.version > lastVersion) {
+              lastVersion = snapshot.version;
+              enqueue(`event: update\ndata: ${JSON.stringify({ version: snapshot.version })}\n\n`);
+              return;
+            }
+
+            enqueue(': keepalive\n\n');
+          })
+          .catch(cleanup)
+          .finally(() => {
+            polling = false;
+          });
+      }, 2500);
     },
     cancel() {
       cleanup();

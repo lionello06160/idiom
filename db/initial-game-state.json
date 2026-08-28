@@ -1,0 +1,549 @@
+{
+  "state": {
+    "grid": [
+      [
+        null,
+        {
+          "char": "得",
+          "isSolution": true,
+          "idiomId": "得過且過",
+          "hintId": 4
+        },
+        null,
+        null,
+        null,
+        null,
+        {
+          "char": "姑",
+          "isSolution": true,
+          "idiomId": "姑妄言之",
+          "hintId": 10
+        },
+        null
+      ],
+      [
+        {
+          "char": "事",
+          "isSolution": true,
+          "idiomId": "事過境遷",
+          "hintId": 7
+        },
+        {
+          "char": "過",
+          "isSolution": true,
+          "idiomId": "事過境遷",
+          "hintId": 4
+        },
+        {
+          "char": "境",
+          "isSolution": true,
+          "idiomId": "事過境遷",
+          "hintId": 7
+        },
+        {
+          "char": "遷",
+          "isSolution": true,
+          "idiomId": "事過境遷",
+          "hintId": 7
+        },
+        {
+          "char": "迫",
+          "isSolution": true,
+          "idiomId": "迫不及待",
+          "hintId": 5
+        },
+        null,
+        {
+          "char": "妄",
+          "isSolution": true,
+          "idiomId": "姑妄言之",
+          "hintId": 10
+        },
+        null
+      ],
+      [
+        null,
+        {
+          "char": "且",
+          "isSolution": true,
+          "idiomId": "得過且過",
+          "hintId": 4
+        },
+        null,
+        null,
+        {
+          "char": "不",
+          "isSolution": true,
+          "idiomId": "不苟言笑",
+          "hintId": 5
+        },
+        {
+          "char": "苟",
+          "isSolution": true,
+          "idiomId": "不苟言笑",
+          "hintId": 6
+        },
+        {
+          "char": "言",
+          "isSolution": true,
+          "idiomId": "姑妄言之",
+          "hintId": 6
+        },
+        {
+          "char": "笑",
+          "isSolution": true,
+          "idiomId": "不苟言笑",
+          "hintId": 6
+        }
+      ],
+      [
+        null,
+        {
+          "char": "過",
+          "isSolution": true,
+          "idiomId": "得過且過",
+          "hintId": 3
+        },
+        {
+          "char": "猶",
+          "isSolution": true,
+          "idiomId": "過猶不及",
+          "hintId": 2
+        },
+        {
+          "char": "不",
+          "isSolution": true,
+          "idiomId": "過猶不及",
+          "hintId": 3
+        },
+        {
+          "char": "及",
+          "isSolution": true,
+          "idiomId": "迫不及待",
+          "hintId": 3
+        },
+        null,
+        {
+          "char": "之",
+          "isSolution": true,
+          "idiomId": "姑妄言之",
+          "hintId": 10
+        },
+        null
+      ],
+      [
+        null,
+        null,
+        {
+          "char": "豫",
+          "isSolution": true,
+          "idiomId": "猶豫不決",
+          "hintId": 2
+        },
+        null,
+        {
+          "char": "待",
+          "isSolution": true,
+          "idiomId": "待價而沽",
+          "hintId": 5
+        },
+        {
+          "char": "價",
+          "isSolution": true,
+          "idiomId": "待價而沽",
+          "hintId": 8
+        },
+        {
+          "char": "而",
+          "isSolution": true,
+          "idiomId": "待價而沽",
+          "hintId": 8
+        },
+        {
+          "char": "沽",
+          "isSolution": true,
+          "idiomId": "沽名釣譽",
+          "hintId": 8
+        }
+      ],
+      [
+        null,
+        {
+          "char": "目",
+          "isSolution": true,
+          "idiomId": "目不交睫",
+          "hintId": 1
+        },
+        {
+          "char": "不",
+          "isSolution": true,
+          "idiomId": "猶豫不決",
+          "hintId": 1
+        },
+        {
+          "char": "交",
+          "isSolution": true,
+          "idiomId": "目不交睫",
+          "hintId": 1
+        },
+        {
+          "char": "睫",
+          "isSolution": true,
+          "idiomId": "目不交睫",
+          "hintId": 1
+        },
+        null,
+        null,
+        {
+          "char": "名",
+          "isSolution": true,
+          "idiomId": "沽名釣譽",
+          "hintId": 9
+        }
+      ],
+      [
+        null,
+        null,
+        {
+          "char": "決",
+          "isSolution": true,
+          "idiomId": "猶豫不決",
+          "hintId": 2
+        },
+        null,
+        null,
+        null,
+        null,
+        {
+          "char": "釣",
+          "isSolution": true,
+          "idiomId": "沽名釣譽",
+          "hintId": 9
+        }
+      ],
+      [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "char": "譽",
+          "isSolution": true,
+          "idiomId": "沽名釣譽",
+          "hintId": 9
+        }
+      ]
+    ],
+    "userGrid": [
+      [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    ],
+    "revealed": [
+      [
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      [
+        false,
+        true,
+        false,
+        true,
+        true,
+        false,
+        true,
+        false
+      ],
+      [
+        false,
+        true,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false
+      ],
+      [
+        false,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false
+      ],
+      [
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false
+      ],
+      [
+        false,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    ],
+    "placedIdioms": [
+      {
+        "idiom": {
+          "word": "目不交睫",
+          "definition": "比喻人忙碌或心情不安而不能入眠。"
+        },
+        "x": 1,
+        "y": 5,
+        "direction": "H"
+      },
+      {
+        "idiom": {
+          "word": "猶豫不決",
+          "definition": "遲疑不定，無法拿定主意。"
+        },
+        "x": 2,
+        "y": 3,
+        "direction": "V"
+      },
+      {
+        "idiom": {
+          "word": "過猶不及",
+          "definition": "做事過分就好比做得不夠一樣，皆不妥當；指事情要做得恰到好處。"
+        },
+        "x": 1,
+        "y": 3,
+        "direction": "H"
+      },
+      {
+        "idiom": {
+          "word": "得過且過",
+          "definition": "形容苟且偷安，不求上進。"
+        },
+        "x": 1,
+        "y": 0,
+        "direction": "V"
+      },
+      {
+        "idiom": {
+          "word": "迫不及待",
+          "definition": "形容心情急切，不願等待。"
+        },
+        "x": 4,
+        "y": 1,
+        "direction": "V"
+      },
+      {
+        "idiom": {
+          "word": "不苟言笑",
+          "definition": "不隨便談笑，態度嚴肅。"
+        },
+        "x": 4,
+        "y": 2,
+        "direction": "H"
+      },
+      {
+        "idiom": {
+          "word": "事過境遷",
+          "definition": "事情過了，環境也已改變。"
+        },
+        "x": 0,
+        "y": 1,
+        "direction": "H"
+      },
+      {
+        "idiom": {
+          "word": "待價而沽",
+          "definition": "比喻人等待良機，為世所用。＆比喻商品等待買主出高價買下。"
+        },
+        "x": 4,
+        "y": 4,
+        "direction": "H"
+      },
+      {
+        "idiom": {
+          "word": "沽名釣譽",
+          "definition": "形容故意做作，用手段謀取名聲和讚譽。"
+        },
+        "x": 7,
+        "y": 4,
+        "direction": "V"
+      },
+      {
+        "idiom": {
+          "word": "姑妄言之",
+          "definition": "姑且隨便說說，表示說的不一定是正確的話。"
+        },
+        "x": 6,
+        "y": 0,
+        "direction": "V"
+      }
+    ],
+    "activeIdiomKey": "目不交睫:H:1:5",
+    "selectedCell": [
+      5,
+      3
+    ],
+    "candidates": [
+      "之",
+      "事",
+      "名",
+      "價",
+      "豫",
+      "未",
+      "苟",
+      "交",
+      "而",
+      "似",
+      "決",
+      "辟",
+      "依",
+      "姑",
+      "濤",
+      "辜",
+      "沽",
+      "笑",
+      "言",
+      "境",
+      "譽",
+      "睫",
+      "釣",
+      "鬥"
+    ],
+    "isComplete": false,
+    "level": 11890,
+    "stats": {
+      "score": 4412338,
+      "streak": 2,
+      "mistakes": 1,
+      "hintsUsed": 0,
+      "solvedCells": 14,
+      "totalCells": 31
+    },
+    "toast": null,
+    "isReady": true,
+    "isAdvancing": false,
+    "isResetting": false,
+    "answerEffect": null,
+    "idiomEffect": null,
+    "nextLevelStatus": "loading",
+    "syncVersion": 315271,
+    "syncStatus": "synced"
+  },
+  "version": 315272,
+  "updatedAt": 1787847395959
+}
