@@ -1029,55 +1029,59 @@ export function GameOverlay() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="fixed inset-0 z-50 flex overflow-y-auto bg-black/60 p-3 backdrop-blur-md sm:items-center sm:justify-center sm:p-6"
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/60 p-3 backdrop-blur-md sm:p-6"
         >
           <motion.div
             initial={reduceMotion ? { opacity: 1 } : { scale: 0.92, y: 34, opacity: 0 }}
             animate={reduceMotion ? { opacity: 1 } : { scale: 1, y: 0, opacity: 1 }}
             transition={{ duration: 0.32, ease: 'easeOut' }}
-            className="relative my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-sm overflow-y-auto rounded-[1.5rem] bg-white p-5 text-center sm:max-h-[calc(100dvh-3rem)] sm:rounded-[2rem] sm:p-10"
+            className="relative flex max-h-[calc(100dvh-1.5rem)] w-full max-w-sm flex-col overflow-hidden rounded-[1.5rem] bg-white p-4 text-center sm:block sm:max-h-[calc(100dvh-3rem)] sm:overflow-y-auto sm:rounded-[2rem] sm:p-10"
           >
             <div className="absolute left-0 top-0 h-2 w-full bg-gradient-to-r from-primary via-accent to-secondary" />
 
-            <div className="mb-4 inline-flex rounded-full bg-primary/10 p-4 text-primary">
-              <Trophy size={48} />
-            </div>
-
-            <h2 className="title-gradient text-4xl font-black">過關了</h2>
-            <p className="mt-3 text-lg text-foreground/70">第 {level} 關已完成，下一關會更少提示、更高密度。</p>
-
-            <div className={cn('mt-6 rounded-[1.5rem] border px-5 py-4', grade.className)}>
-              <div className="flex items-center justify-center gap-3">
-                <Award size={26} />
-                <span className="text-sm font-black text-foreground/60">本關評級</span>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5 sm:contents">
+              <div className="mb-2 inline-flex rounded-full bg-primary/10 p-2.5 text-primary sm:mb-4 sm:p-4">
+                <Trophy className="h-9 w-9 sm:h-12 sm:w-12" />
               </div>
-              <p className="mt-2 text-6xl font-black leading-none">{grade.letter}</p>
-              <p className="mt-2 text-xl font-black text-foreground">{grade.title}</p>
-              <p className="mt-1 text-sm font-semibold text-foreground/60">{grade.description}</p>
-            </div>
 
-            <div className="my-6 grid grid-cols-3 gap-2 text-sm">
-              <div className="rounded-2xl bg-slate-100 p-3">
-                <p className="text-foreground/55">分數</p>
-                <p className="mt-1 text-xl font-black text-primary">{stats.score}</p>
-              </div>
-              <div className="rounded-2xl bg-slate-100 p-3">
-                <p className="text-foreground/55">錯誤</p>
-                <p className="mt-1 text-xl font-black text-accent">{stats.mistakes}</p>
-              </div>
-              <div className="rounded-2xl bg-slate-100 p-3">
-                <p className="text-foreground/55">提示</p>
-                <p className="mt-1 text-xl font-black text-secondary">{stats.hintsUsed}</p>
-              </div>
-            </div>
+              <h2 className="title-gradient text-3xl font-black sm:text-4xl">過關了</h2>
+              <p className="mt-1 text-sm leading-snug text-foreground/70 sm:mt-3 sm:text-lg sm:leading-normal">
+                第 {level} 關已完成，下一關會更少提示、更高密度。
+              </p>
 
-            <div className="mb-6 flex items-center justify-center gap-2 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
-              <TriangleAlert size={16} />
-              重開本關會扣 10 分，提示每次扣 5 分
+              <div className={cn('mt-3 rounded-[1.25rem] border px-3 py-2.5 sm:mt-6 sm:rounded-[1.5rem] sm:px-5 sm:py-4', grade.className)}>
+                <div className="flex items-center justify-center gap-2 sm:gap-3">
+                  <Award className="h-5 w-5 sm:h-[26px] sm:w-[26px]" />
+                  <span className="text-xs font-black text-foreground/60 sm:text-sm">本關評級</span>
+                </div>
+                <p className="mt-1 text-4xl font-black leading-none sm:mt-2 sm:text-6xl">{grade.letter}</p>
+                <p className="mt-1 text-base font-black text-foreground sm:mt-2 sm:text-xl">{grade.title}</p>
+                <p className="mt-0.5 text-xs font-semibold text-foreground/60 sm:mt-1 sm:text-sm">{grade.description}</p>
+              </div>
+
+              <div className="my-3 grid grid-cols-3 gap-2 text-xs sm:my-6 sm:text-sm">
+                <div className="rounded-xl bg-slate-100 p-2 sm:rounded-2xl sm:p-3">
+                  <p className="text-foreground/55">分數</p>
+                  <p className="mt-0.5 text-lg font-black text-primary sm:mt-1 sm:text-xl">{stats.score}</p>
+                </div>
+                <div className="rounded-xl bg-slate-100 p-2 sm:rounded-2xl sm:p-3">
+                  <p className="text-foreground/55">錯誤</p>
+                  <p className="mt-0.5 text-lg font-black text-accent sm:mt-1 sm:text-xl">{stats.mistakes}</p>
+                </div>
+                <div className="rounded-xl bg-slate-100 p-2 sm:rounded-2xl sm:p-3">
+                  <p className="text-foreground/55">提示</p>
+                  <p className="mt-0.5 text-lg font-black text-secondary sm:mt-1 sm:text-xl">{stats.hintsUsed}</p>
+                </div>
+              </div>
+
+              <div className="mb-6 hidden items-center justify-center gap-2 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700 sm:flex">
+                <TriangleAlert size={16} />
+                重開本關會扣 10 分，提示每次扣 5 分
+              </div>
             </div>
 
             <div className={cn(
-              'mb-4 flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold',
+              'mb-3 mt-3 flex shrink-0 items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold sm:mb-4 sm:mt-0 sm:rounded-2xl sm:px-4 sm:py-3 sm:text-sm',
               isNextLevelReady && 'bg-emerald-50 text-emerald-700',
               !isNextLevelReady && nextLevelStatus !== 'error' && 'bg-sky-50 text-sky-700',
               nextLevelStatus === 'error' && 'bg-rose-50 text-rose-700'
@@ -1093,7 +1097,7 @@ export function GameOverlay() {
               onClick={nextLevel}
               disabled={isAdvancing}
               className={cn(
-                'group flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-8 py-4 text-xl font-bold text-white shadow-lg shadow-primary/30 transition-all',
+                'group flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-8 py-3 text-lg font-bold text-white shadow-lg shadow-primary/30 transition-all sm:rounded-2xl sm:py-4 sm:text-xl',
                 !isAdvancing && 'hover:gap-4',
                 isAdvancing && 'cursor-wait opacity-80'
               )}
